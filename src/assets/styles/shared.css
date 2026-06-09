@@ -1,0 +1,178 @@
+:root {
+  --color-bg: #0f0f0f;
+  --color-surface: #1e1e1e;
+  --color-border: #323232;
+  --color-border-subtle: #ffffff0f;
+  --color-text: #ffffff;
+  --color-text-muted: #999999;
+  --color-accent: #b9aaff;
+  --color-accent-hover: #6a54d3;
+  --color-accent-active: #463693;
+  --color-accent-muted: #b9aaff55;
+  --shadow-btn: 0 0 0 2px #241b4e, 0 0 0 4px #b9aaff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+html {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.page {
+  width: min(960px, 90%);
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.page-narrow {
+  width: min(560px, 90%);
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0 0 2rem;
+  font-size: 1.1rem;
+}
+
+.section {
+  margin-top: 3rem;
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  color: var(--color-text);
+  border: none;
+  padding: 0.45rem 1.3rem;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  background: var(--color-accent-hover);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--shadow-btn);
+  transition:
+    background-color 100ms ease-in-out,
+    color 100ms ease-in-out,
+    border-color 100ms ease-in-out;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn:hover {
+  color: var(--color-text);
+  background-color: var(--color-accent);
+}
+
+.btn:active {
+  background-color: var(--color-accent-active);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: white;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+  color: white;
+}
+
+.btn-group {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.textlink {
+  text-decoration: none;
+  color: white;
+  transition: color 0.2s ease;
+  font-size: 1rem;
+}
+
+.textlink:hover {
+  color: var(--color-accent);
+}
+
+.textlink.active {
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  color: white;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.form-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+}

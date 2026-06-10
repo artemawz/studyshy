@@ -1,7 +1,9 @@
 <script setup lang="ts">
 const team = [
-  { name: 'Lix', role: 'Gründer & Entwicklung' },
-  { name: 'Community', role: 'Feedback & Ideen' },
+  { name: 'Oskar Junghans', role: 'Student 🤓' },
+  { name: 'Isaak Akritidis', role: 'Student 🤓' },
+  { name: 'Tim Große-Brockhoff', role: 'Student 🤓' },
+  { name: 'Felix Schrage', role: 'Student 🤓' },
 ]
 
 const values = [

@@ -33,7 +33,7 @@ function startChat() {
 <template>
   <div v-if="student" class="page-narrow">
     <div class="card profile">
-      <img v-if="student.avatarUrl" :src="student.avatarUrl" width="96" height="96" alt="" class="avatar" />
+      <img v-if="student.avatarUrl" :src="student.avatarUrl" width="96" height="96" alt="student-avatar" class="avatar" />
       <h1 class="page-title">{{ displayName }}</h1>
       <p class="uni">{{ student.uni }}</p>
 

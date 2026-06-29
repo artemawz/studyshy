@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { type User } from '@/types'
-import { getUserTags, type MatchScore } from '@/misc'
+import { getUserTags, getMatchPercent, type MatchScore } from '@/misc'
 import FilterTag from './FilterTag.vue'
 import TagList from './TagList.vue'
 
@@ -18,8 +18,7 @@ const tags = computed(() => getUserTags(props.student))
 
 const matchLabel = computed(() => {
   if (!props.matchScore || props.matchScore.total === 0) return null
-  const pct = Math.round((props.matchScore.matched / props.matchScore.total) * 100)
-  return `${pct}% Match`
+  return `${getMatchPercent(props.matchScore)}% Match`
 })
 </script>
 

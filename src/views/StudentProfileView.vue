@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FilterTag from '@/components/FilterTag.vue'
 import TagList from '@/components/TagList.vue'
@@ -8,18 +8,32 @@ import EmptyState from '@/components/EmptyState.vue'
 import { useStudents } from '@/composables/useStudents'
 import { useAuth } from '@/composables/useAuth'
 import { getUserTags } from '@/misc'
+import type { User } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
-const { getStudentById } = useStudents()
-const { isLoggedIn } = useAuth()
+const { fetchStudentById } = useStudents()
+const { isLoggedIn, currentUser } = useAuth()
+
+const isOwnProfile = computed(
+  () => isLoggedIn.value && currentUser.value?.id === studentId.value,
+)
 
 const studentId = computed(() => parseInt(route.params.id as string, 10))
-const student = computed(() => getStudentById(studentId.value))
+const student = ref<User | undefined>(undefined)
+const loading = ref(true)
 
 const displayName = computed(
   () => student.value?.pub_name ?? `Student #${studentId.value.toString(16)}`,
 )
+
+async function loadStudent() {
+  loading.value = true
+  student.value = await fetchStudentById(studentId.value)
+  loading.value = false
+}
+
+watch(studentId, loadStudent, { immediate: true })
 
 function startChat() {
   if (!isLoggedIn.value) {
@@ -31,7 +45,11 @@ function startChat() {
 </script>
 
 <template>
-  <div v-if="student" class="page-narrow">
+  <div v-if="loading" class="page-narrow">
+    <EmptyState title="Profil wird geladen…" />
+  </div>
+
+  <div v-else-if="student" class="page-narrow">
     <div class="card profile">
       <img v-if="student.avatarUrl" :src="student.avatarUrl" width="96" height="96" alt="student-avatar" class="avatar" />
       <h1 class="page-title">{{ displayName }}</h1>
@@ -44,8 +62,14 @@ function startChat() {
       </TagList>
 
       <div class="actions">
-        <AppButton @click="startChat">Nachricht senden</AppButton>
-        <RouterLink to="/" class="btn btn-secondary">Zurück zur Suche</RouterLink>
+        <template v-if="isOwnProfile">
+          <RouterLink :to="{ name: 'profile-edit' }" class="btn">Profil bearbeiten</RouterLink>
+          <RouterLink to="/" class="btn btn-secondary">Zurück zur Suche</RouterLink>
+        </template>
+        <template v-else>
+          <AppButton @click="startChat">Nachricht senden</AppButton>
+          <RouterLink to="/" class="btn btn-secondary">Zurück zur Suche</RouterLink>
+        </template>
       </div>
     </div>
   </div>

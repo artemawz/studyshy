@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import FilterTag from '@/components/FilterTag.vue'
 import TagList from '@/components/TagList.vue'
@@ -7,13 +7,16 @@ import MatchesList from '@/components/MatchesList.vue'
 import StudentCard from '@/components/StudentCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import AppButton from '@/components/AppButton.vue'
-import { filterOptions, platformStats } from '@/data/mockData'
 import { useStudents } from '@/composables/useStudents'
-import { filterStudents, getMatchScore, toggleSelection } from '@/misc'
-import type { StudentFilters } from '@/types'
+import { useMeta } from '@/composables/useMeta'
+import { filterStudents, getMatchPercent, getMatchScore, toggleSelection } from '@/misc'
+import type { StudentFilters, User } from '@/types'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { students } = useStudents()
+const { currentUser } = useAuth()
+const { students, loading, error, fetchStudents } = useStudents()
+const { filterOptions, platformStats, fetchMeta } = useMeta()
 
 const selectedUnis = ref<number[]>([])
 const selectedCourses = ref<number[]>([])
@@ -21,14 +24,23 @@ const selectedInterests = ref<number[]>([])
 const selectedSemesters = ref<number[]>([])
 const sortBy = ref<'match' | 'name'>('match')
 
+onMounted(async () => {
+  await Promise.all([fetchMeta(), fetchStudents()])
+})
+
 const activeFilters = computed<StudentFilters>(() => ({
-  unis: selectedUnis.value.map((i) => filterOptions.unis[i]!),
-  courses: selectedCourses.value.map((i) => filterOptions.courses[i]!),
-  interests: selectedInterests.value.map((i) => filterOptions.interests[i]!),
-  semesters: selectedSemesters.value.map((i) => filterOptions.semesters[i]!),
+  unis: selectedUnis.value.map((i) => filterOptions.value.unis[i]!),
+  courses: selectedCourses.value.map((i) => filterOptions.value.courses[i]!),
+  interests: selectedInterests.value.map((i) => filterOptions.value.interests[i]!),
+  semesters: selectedSemesters.value.map((i) => filterOptions.value.semesters[i]!),
 }))
 
-const filteredStudents = computed(() => filterStudents(students, activeFilters.value))
+const filteredStudents = computed(() => filterStudents(students.value, activeFilters.value))
+
+function studentMatchScore(student: User) {
+  if (!currentUser.value) return { matched: 0, total: 0 }
+  return getMatchScore(student, currentUser.value)
+}
 
 const sortedStudents = computed(() => {
   const list = [...filteredStudents.value]
@@ -37,28 +49,23 @@ const sortedStudents = computed(() => {
       (a.pub_name ?? '').localeCompare(b.pub_name ?? '', 'de'),
     )
   }
-  return list.sort((a, b) => {
-    const scoreA = getMatchScore(a, activeFilters.value)
-    const scoreB = getMatchScore(b, activeFilters.value)
-    const pctA = scoreA.total ? scoreA.matched / scoreA.total : 0
-    const pctB = scoreB.total ? scoreB.matched / scoreB.total : 0
-    return pctB - pctA
-  })
+  if (!currentUser.value) return list
+  return list.sort((a, b) => getMatchPercent(studentMatchScore(b)) - getMatchPercent(studentMatchScore(a)))
 })
 
 const activeFilterChips = computed(() => {
   const chips: { label: string; group: keyof typeof toggles; idx: number }[] = []
   selectedUnis.value.forEach((idx) =>
-    chips.push({ label: filterOptions.unis[idx]!, group: 'unis', idx }),
+    chips.push({ label: filterOptions.value.unis[idx]!, group: 'unis', idx }),
   )
   selectedCourses.value.forEach((idx) =>
-    chips.push({ label: filterOptions.courses[idx]!, group: 'courses', idx }),
+    chips.push({ label: filterOptions.value.courses[idx]!, group: 'courses', idx }),
   )
   selectedInterests.value.forEach((idx) =>
-    chips.push({ label: filterOptions.interests[idx]!, group: 'interests', idx }),
+    chips.push({ label: filterOptions.value.interests[idx]!, group: 'interests', idx }),
   )
   selectedSemesters.value.forEach((idx) =>
-    chips.push({ label: `Sem. ${filterOptions.semesters[idx]}`, group: 'semesters', idx }),
+    chips.push({ label: `Sem. ${filterOptions.value.semesters[idx]}`, group: 'semesters', idx }),
   )
   return chips
 })
@@ -108,6 +115,8 @@ function removeChip(group: keyof typeof toggles, idx: number) {
     </section>
 
     <section id="stats" class="section">
+      <p v-if="loading" class="loading-hint">Daten werden geladen…</p>
+      <p v-if="error" class="form-error">{{ error }}</p>
       <dl class="stat-list">
         <div class="stat-card">
           <dt class="stat-title">Studierende</dt>
@@ -205,7 +214,7 @@ function removeChip(group: keyof typeof toggles, idx: number) {
           v-for="student in sortedStudents"
           :key="student.id"
           :student="student"
-          :match-score="getMatchScore(student, activeFilters)"
+          :match-score="studentMatchScore(student)"
           @click="studentClicked(student.id)"
         />
       </MatchesList>
@@ -341,5 +350,11 @@ function removeChip(group: keyof typeof toggles, idx: number) {
 
 .section-title {
   color: var(--color-text);
+}
+
+.loading-hint {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
 }
 </style>

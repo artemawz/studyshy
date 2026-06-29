@@ -5,11 +5,11 @@ import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
-const { isLoggedIn, logout } = useAuth()
+const { isLoggedIn, logout, currentUser } = useAuth()
 const { show } = useToast()
 
-function handleLogout() {
-  logout()
+async function handleLogout() {
+  await logout()
   show('Erfolgreich abgemeldet.', 'info')
 }
 
@@ -39,7 +39,18 @@ function isActive(path: string) {
 
     <div class="nav-actions">
       <template v-if="isLoggedIn">
-        <RouterLink to="/register" class="textlink">Profil</RouterLink>
+        <RouterLink
+          v-if="currentUser"
+          :to="{ name: 'profile-view', params: { id: currentUser.id.toString() } }"
+          class="textlink"
+          :class="{
+            active:
+              (route.name === 'profile-view' && route.params.id === currentUser.id.toString()) ||
+              route.name === 'profile-edit',
+          }"
+        >
+          Profil
+        </RouterLink>
         <button class="btn btn-secondary" @click="handleLogout">Logout</button>
       </template>
       <template v-else>

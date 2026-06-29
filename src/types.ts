@@ -13,12 +13,19 @@ export interface User {
   bio?: string
 }
 
+export interface PlatformStats {
+  students: string
+  universities: string
+  connections: string
+  anonymous: string
+}
+
 export interface ChatPreview {
   id: number
   partnerId: number
   partnerName: string
   lastMessage: string
-  updatedAt: Date
+  updatedAt: string | Date
   unread: boolean
 }
 
@@ -27,7 +34,7 @@ export interface Message {
   chatId: number
   senderId: number
   text: string
-  sentAt: Date
+  sentAt: string | Date
 }
 
 export interface FilterOptions {

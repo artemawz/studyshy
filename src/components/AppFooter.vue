@@ -12,7 +12,7 @@ import { RouterLink } from 'vue-router'
         <RouterLink to="/about" class="textlink">Über uns</RouterLink>
         <RouterLink to="/register" class="textlink">Registrieren</RouterLink>
       </nav>
-      <p class="copy">© {{ new Date().getFullYear() }} Studyshy · Frontend-MVP</p>
+      <p class="copy">© {{ new Date().getFullYear() }} Studyshy</p>
     </div>
   </footer>
 </template>

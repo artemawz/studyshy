@@ -3,7 +3,7 @@
 <template>
   <RouterLink to="/">
     <div>
-      <img class="desktop" src="/studyshy-logo.svg" alt="studyshy logo" />
+      <img class="desktop" src="/studyshy-logo-notext.svg" alt="studyshy logo" />
       <!-- <img class="mobile" src="../../public/studyshy-logo-notext.svg" alt="studyshy logo" />   -->
     </div>
   </RouterLink>

@@ -2,13 +2,7 @@ import type { ChatPreview, FilterOptions, Message, User } from '@/types'
 import { getRandomInt } from '@/misc'
 
 export const filterOptions: FilterOptions = {
-  unis: [
-    'Hochschule Bochum',
-    'Ruhr-Uni Bochum',
-    'Uni Duisburg-Essen',
-    'TU München',
-    'TU Dortmund',
-  ],
+  unis: ['Hochschule Bochum', 'Ruhr-Universität Bochum'],
   courses: ['Informatik', 'Elektrotechnik', 'BWL', 'Germanistik', 'Medizin', 'Lehramt', 'Jura'],
   interests: [
     'Flugzeuge',
@@ -39,7 +33,7 @@ export const mockStudents: User[] = [
   {
     id: 2,
     pub_name: 'Student #7c2',
-    uni: 'Ruhr-Uni Bochum',
+    uni: 'Ruhr-Universität Bochum',
     courses: [{ name: 'Elektrotechnik', semester: 5 }],
     interests: ['Formel 1', 'Flugzeuge'],
     avatarUrl: avatar(33),
@@ -48,7 +42,7 @@ export const mockStudents: User[] = [
   {
     id: 3,
     pub_name: 'Student #19e',
-    uni: 'TU München',
+    uni: 'Ruhr-Universität Bochum',
     courses: [{ name: 'Medizin', semester: 7 }],
     interests: ['Umweltschutz', 'Kochen'],
     avatarUrl: avatar(45),
@@ -57,7 +51,7 @@ export const mockStudents: User[] = [
   {
     id: 4,
     pub_name: 'Student #b81',
-    uni: 'Uni Duisburg-Essen',
+    uni: 'Hochschule Bochum',
     courses: [{ name: 'BWL', semester: 2 }],
     interests: ['Musik', 'Kunst'],
     avatarUrl: avatar(8),
@@ -66,7 +60,7 @@ export const mockStudents: User[] = [
   {
     id: 5,
     pub_name: 'Student #4d0',
-    uni: 'TU Dortmund',
+    uni: 'Hochschule Bochum',
     courses: [{ name: 'Informatik', semester: 6 }],
     interests: ['Backen', 'Menschenrechte'],
     avatarUrl: avatar(22),
@@ -84,7 +78,7 @@ export const mockStudents: User[] = [
   {
     id: 7,
     pub_name: 'Student #2aa',
-    uni: 'Ruhr-Uni Bochum',
+    uni: 'Ruhr-Universität Bochum',
     courses: [{ name: 'Jura', semester: 8 }],
     interests: ['Fußball', 'Formel 1'],
     avatarUrl: avatar(17),
@@ -93,7 +87,7 @@ export const mockStudents: User[] = [
   {
     id: 8,
     pub_name: 'Student #c07',
-    uni: 'TU München',
+    uni: 'Ruhr-Universität Bochum',
     courses: [{ name: 'Informatik', semester: 10 }],
     interests: ['Flugzeuge', 'Kochen', 'Musik'],
     avatarUrl: avatar(getRandomInt(1, 64)),
@@ -102,7 +96,7 @@ export const mockStudents: User[] = [
   {
     id: 9,
     pub_name: 'Student #88b',
-    uni: 'Uni Duisburg-Essen',
+    uni: 'Hochschule Bochum',
     courses: [{ name: 'Germanistik', semester: 3 }],
     interests: ['Kunst', 'Backen'],
     avatarUrl: avatar(29),
@@ -111,7 +105,7 @@ export const mockStudents: User[] = [
   {
     id: 10,
     pub_name: 'Student #e14',
-    uni: 'TU Dortmund',
+    uni: 'Ruhr-Universität Bochum',
     courses: [{ name: 'Elektrotechnik', semester: 1 }],
     interests: ['Fußball', 'Musik'],
     avatarUrl: avatar(41),
@@ -171,7 +165,7 @@ export const mockMessages: Message[] = [
 
 export const platformStats = {
   students: '12.400',
-  universities: '38',
+  universities: '2',
   connections: '3.000+',
   anonymous: '100%',
 }

@@ -1,32 +1,40 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import FormField from '@/components/FormField.vue'
 import AppButton from '@/components/AppButton.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import { ApiError } from '@/services/api'
 
+const route = useRoute()
 const router = useRouter()
-const { login } = useAuth()
+const { login, loading } = useAuth()
 const { show } = useToast()
 
 const email = ref('')
 const password = ref('')
 const error = ref('')
 
-function handleSubmit() {
+async function handleSubmit() {
   error.value = ''
   if (!email.value.includes('@')) {
     error.value = 'Bitte gib eine gültige E-Mail-Adresse ein.'
     return
   }
-  if (password.value.length < 4) {
-    error.value = 'Das Passwort muss mindestens 4 Zeichen haben.'
+  if (password.value.length < 8) {
+    error.value = 'Das Passwort muss mindestens 8 Zeichen haben.'
     return
   }
-  login(email.value, password.value)
-  show('Willkommen zurück!', 'success')
-  router.push('/')
+
+  try {
+    await login(email.value, password.value)
+    show('Willkommen zurück!', 'success')
+    const redirect = route.query.redirect as string | undefined
+    router.push(redirect || '/')
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : 'Anmeldung fehlgeschlagen.'
+  }
 }
 </script>
 
@@ -40,7 +48,7 @@ function handleSubmit() {
       <FormField v-model="password" label="Passwort" type="password" required />
       <p v-if="error" class="form-error">{{ error }}</p>
 
-      <AppButton type="submit">Anmelden</AppButton>
+      <AppButton type="submit" :disabled="loading">{{ loading ? 'Anmelden…' : 'Anmelden' }}</AppButton>
 
       <p class="footer-hint">
         Noch kein Konto?

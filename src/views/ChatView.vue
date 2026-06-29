@@ -7,28 +7,41 @@ import { useChats } from '@/composables/useChats'
 import { useStudents } from '@/composables/useStudents'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import type { User } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
-const { getChatById, getChatByPartnerId, resolveChatId, getMessagesForChat, sendMessage } = useChats()
-const { getStudentById } = useStudents()
-const { isLoggedIn } = useAuth()
+const { resolveChatId, fetchMessages, getMessagesForChat, sendMessage, getChatById } = useChats()
+const { fetchStudentById } = useStudents()
+const { currentUser } = useAuth()
 const { show } = useToast()
 
 const routeId = computed(() => parseInt(route.params.id as string, 10))
-const chatId = computed(() => resolveChatId(routeId.value))
-
-const partner = computed(() => {
-  const byPartner = getChatByPartnerId(routeId.value)
-  if (byPartner) return getStudentById(byPartner.partnerId)
-  const byChat = getChatById(routeId.value)
-  if (byChat) return getStudentById(byChat.partnerId)
-  return getStudentById(routeId.value)
-})
-
-const messages = computed(() => getMessagesForChat(chatId.value))
+const chatId = ref<number | null>(null)
+const partner = ref<User | undefined>(undefined)
+const loading = ref(true)
+const sending = ref(false)
 const newMessage = ref('')
 const messagesEnd = ref<HTMLElement | null>(null)
+
+const messages = computed(() => (chatId.value ? getMessagesForChat(chatId.value) : []))
+
+async function loadChat() {
+  loading.value = true
+  try {
+    const id = await resolveChatId(routeId.value)
+    chatId.value = id
+    await fetchMessages(id)
+
+    const chat = getChatById(id)
+    const partnerId = chat?.partnerId ?? routeId.value
+    partner.value = await fetchStudentById(partnerId)
+  } catch {
+    partner.value = undefined
+  } finally {
+    loading.value = false
+  }
+}
 
 watch(
   messages,
@@ -39,30 +52,35 @@ watch(
   { immediate: true },
 )
 
-function handleSend() {
+watch(routeId, loadChat, { immediate: true })
+
+async function handleSend() {
   const text = newMessage.value.trim()
-  if (!text) return
-  sendMessage(chatId.value, text)
-  newMessage.value = ''
-  show('Nachricht gesendet.', 'success')
+  if (!text || !chatId.value || sending.value) return
+
+  sending.value = true
+  try {
+    await sendMessage(chatId.value, text)
+    newMessage.value = ''
+    show('Nachricht gesendet.', 'success')
+  } catch {
+    show('Nachricht konnte nicht gesendet werden.', 'error')
+  } finally {
+    sending.value = false
+  }
 }
 
-function formatTime(date: Date) {
-  return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+function formatTime(date: Date | string) {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
 <template>
   <div class="page-narrow chat-page">
-    <EmptyState
-      v-if="!isLoggedIn"
-      title="Bitte anmelden"
-      hint="Melde dich an, um Nachrichten zu senden."
-    >
-      <RouterLink to="/login" class="btn" style="margin-top: 1rem">Zum Login</RouterLink>
-    </EmptyState>
+    <EmptyState v-if="loading" title="Chat wird geladen…" />
 
-    <template v-else-if="partner">
+    <template v-else-if="partner && chatId">
       <header class="chat-header">
         <button class="back-btn" @click="router.push('/chats')">←</button>
         <div>
@@ -77,7 +95,7 @@ function formatTime(date: Date) {
           v-for="msg in messages"
           :key="msg.id"
           class="message"
-          :class="{ own: msg.senderId === 0 }"
+          :class="{ own: msg.senderId === currentUser?.id }"
         >
           <p class="text">{{ msg.text }}</p>
           <span class="time">{{ formatTime(msg.sentAt) }}</span>
@@ -95,7 +113,9 @@ function formatTime(date: Date) {
           placeholder="Nachricht schreiben…"
           autocomplete="off"
         />
-        <AppButton type="submit" :disabled="!newMessage.trim()">Senden</AppButton>
+        <AppButton type="submit" :disabled="!newMessage.trim() || sending">
+          {{ sending ? '…' : 'Senden' }}
+        </AppButton>
       </form>
     </template>
 

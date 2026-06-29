@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/EmptyState.vue'
 import { useChats } from '@/composables/useChats'
-import { useAuth } from '@/composables/useAuth'
 import { formatRelativeTime } from '@/misc'
 
 const router = useRouter()
-const { chats } = useChats()
-const { isLoggedIn } = useAuth()
+const { chats, loading, error, fetchChats } = useChats()
+
+onMounted(() => {
+  fetchChats()
+})
 
 function openChat(id: number) {
   router.push({ name: 'chat-view', params: { id: id.toString() } })
@@ -19,13 +22,9 @@ function openChat(id: number) {
     <h1 class="page-title">Deine Chats</h1>
     <p class="page-subtitle">Unterhalte dich anonym mit deinen Matches.</p>
 
-    <EmptyState
-      v-if="!isLoggedIn"
-      title="Bitte anmelden"
-      hint="Melde dich an, um deine Unterhaltungen zu sehen."
-    >
-      <RouterLink to="/login" class="btn" style="margin-top: 1rem">Zum Login</RouterLink>
-    </EmptyState>
+    <EmptyState v-if="loading" title="Chats werden geladen…" />
+
+    <p v-else-if="error" class="form-error">{{ error }}</p>
 
     <ul v-else-if="chats.length" class="chat-list">
       <li

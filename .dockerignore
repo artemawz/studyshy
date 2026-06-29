@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+backend/vendor
+backend/.env
+backend/storage/logs
+backend/.phpunit.result.cache
+*.md
+.cursor

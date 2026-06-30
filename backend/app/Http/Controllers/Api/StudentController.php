@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\BlockService;
 use App\Services\StudentFilterService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -14,6 +15,7 @@ class StudentController extends Controller
 {
     public function __construct(
         private readonly StudentFilterService $filterService,
+        private readonly BlockService $blockService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -22,7 +24,9 @@ class StudentController extends Controller
 
         $query = User::query()
             ->with(['courses', 'interests'])
-            ->when($user, fn ($q) => $q->where('id', '!=', $user->id));
+            ->when($user, fn ($q) => $q
+                ->where('id', '!=', $user->id)
+                ->whereNotIn('id', $this->blockService->hiddenUserIds($user->id)));
 
         $this->filterService->apply($query, $request);
 

@@ -33,6 +33,7 @@ class AuthController extends Controller
 
         $user->courses()->create([
             'name' => $request->string('course')->value(),
+            'degree' => $request->input('degree'),
             'semester' => $request->integer('semester'),
         ]);
 

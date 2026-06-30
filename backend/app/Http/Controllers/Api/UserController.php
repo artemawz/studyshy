@@ -38,15 +38,19 @@ class UserController extends Controller
 
         $user->save();
 
-        if ($request->has('course') || $request->has('semester')) {
-            $course = $user->courses()->firstOrNew([]);
+        if ($request->has('course') || $request->has('semester') || $request->has('degree')) {
+            $course = $user->courses()->first() ?? $user->courses()->make();
+
             if ($request->has('course')) {
                 $course->name = $request->string('course')->value();
+            }
+            if ($request->has('degree')) {
+                $course->degree = $request->input('degree');
             }
             if ($request->has('semester')) {
                 $course->semester = $request->integer('semester');
             }
-            $course->user_id = $user->id;
+
             $course->save();
         }
 
@@ -66,7 +70,9 @@ class UserController extends Controller
         $this->deleteStoredAvatar($user->avatar_url);
 
         $path = $request->file('avatar')->store('avatars/'.$user->id, 'public');
-        $user->avatar_url = Storage::disk('public')->url($path);
+        // Relativer Pfad, damit das Bild über den /storage-Proxy auf jedem Host
+        // (lokal, ngrok, …) erreichbar ist – nicht an APP_URL/localhost gebunden.
+        $user->avatar_url = '/storage/'.$path;
         $user->save();
         $user->load(['courses', 'interests']);
 

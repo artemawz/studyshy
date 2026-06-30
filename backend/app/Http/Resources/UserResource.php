@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'avatarUrl' => $this->avatar_url,
             'courses' => $this->whenLoaded('courses', fn () => $this->courses->map(fn ($course) => [
                 'name' => $course->name,
+                'degree' => $course->degree,
                 'semester' => $course->semester,
             ])),
             'interests' => $this->whenLoaded('interests', fn () => $this->interests->pluck('name')),

@@ -12,6 +12,7 @@ class StudentFilterService
     {
         $unis = $this->arrayParam($request, 'uni');
         $courses = $this->arrayParam($request, 'course');
+        $degrees = $this->arrayParam($request, 'degree');
         $interests = $this->arrayParam($request, 'interest');
         $semesters = $this->arrayParam($request, 'semester');
 
@@ -21,6 +22,10 @@ class StudentFilterService
 
         if ($courses !== []) {
             $query->whereHas('courses', fn (Builder $q) => $q->whereIn('name', $courses));
+        }
+
+        if ($degrees !== []) {
+            $query->whereHas('courses', fn (Builder $q) => $q->whereIn('degree', $degrees));
         }
 
         if ($interests !== []) {

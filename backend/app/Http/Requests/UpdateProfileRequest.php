@@ -21,9 +21,10 @@ class UpdateProfileRequest extends FormRequest
             'bio' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'uni' => ['sometimes', 'string', Rule::in(config('studyshy.universities'))],
             'course' => ['sometimes', 'string', 'max:255'],
+            'degree' => ['sometimes', 'nullable', 'string', Rule::in(config('studyshy.degrees'))],
             'semester' => ['sometimes', 'integer', 'min:1', 'max:20'],
-            'interests' => ['sometimes', 'array', 'min:1'],
-            'interests.*' => ['required_with:interests', 'string', 'min:2', 'max:50'],
+            'interests' => ['sometimes', 'array', 'min:1', 'max:4'],
+            'interests.*' => ['required_with:interests', 'string', 'min:2', 'max:30'],
         ];
     }
 
@@ -32,6 +33,9 @@ class UpdateProfileRequest extends FormRequest
     {
         return [
             'uni.in' => 'Bitte wähle eine unterstützte Hochschule.',
+            'degree.in' => 'Bitte wähle einen gültigen Abschluss.',
+            'interests.max' => 'Du kannst maximal 4 Interessen auswählen.',
+            'interests.*.max' => 'Ein Interesse darf höchstens 30 Zeichen haben.',
         ];
     }
 }

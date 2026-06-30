@@ -10,6 +10,7 @@ class UserCourse extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'degree',
         'semester',
     ];
 

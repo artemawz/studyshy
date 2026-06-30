@@ -16,6 +16,7 @@ class StoreChatRequest extends FormRequest
     {
         return [
             'partner_id' => ['required', 'integer', 'exists:users,id', 'not_in:'.$this->user()?->id],
+            'message' => ['nullable', 'string', 'min:1', 'max:2000'],
         ];
     }
 }

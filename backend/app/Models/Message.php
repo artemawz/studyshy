@@ -11,6 +11,11 @@ class Message extends Model
         'chat_id',
         'sender_id',
         'text',
+        'attachment_url',
+        'attachment_type',
+        'attachment_name',
+        'edited_at',
+        'deleted_at',
         'sent_at',
     ];
 
@@ -18,6 +23,8 @@ class Message extends Model
     {
         return [
             'sent_at' => 'datetime',
+            'edited_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 

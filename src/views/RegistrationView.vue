@@ -8,7 +8,14 @@ import TagList from '@/components/TagList.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useMeta } from '@/composables/useMeta'
 import { useToast } from '@/composables/useToast'
-import { toggleSelection, OTHER_INTEREST_LABEL } from '@/misc'
+import {
+  toggleSelection,
+  OTHER_INTEREST_LABEL,
+  isValidRegistrationEmail,
+  isValidPassword,
+  MAX_INTERESTS,
+  MAX_CUSTOM_INTEREST_LENGTH,
+} from '@/misc'
 import { ApiError } from '@/services/api'
 
 const route = useRoute()
@@ -28,6 +35,7 @@ const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
 const uni = ref('')
 const course = ref('')
+const degree = ref('Bachelor')
 const semester = ref('3')
 const bio = ref('')
 const selectedInterests = ref<number[]>([])
@@ -36,6 +44,20 @@ const showOtherInput = ref(false)
 const otherInterestInput = ref('')
 const error = ref('')
 const saving = ref(false)
+const formPopulated = ref(false)
+
+const coursesForSelectedUni = computed(() => {
+  const byUni = filterOptions.value.coursesByUni?.[uni.value]
+  if (byUni && byUni.length) return byUni
+  return filterOptions.value.courses
+})
+
+watch(uni, () => {
+  // Beim Wechsel der Hochschule den Studiengang auf einen gültigen Wert setzen
+  if (!coursesForSelectedUni.value.includes(course.value)) {
+    course.value = coursesForSelectedUni.value[0] ?? ''
+  }
+})
 
 function randomAvatarUrl() {
   return `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 64) + 1}`
@@ -95,23 +117,44 @@ onUnmounted(() => {
 
 onMounted(async () => {
   await fetchMeta()
-  if (filterOptions.value.unis[0]) uni.value = filterOptions.value.unis[0]
-  if (filterOptions.value.courses[0]) course.value = filterOptions.value.courses[0]
+  if (!isEditMode.value) {
+    if (filterOptions.value.unis[0]) uni.value = filterOptions.value.unis[0]
+    if (!course.value && coursesForSelectedUni.value[0]) {
+      course.value = coursesForSelectedUni.value[0]
+    }
+  }
 })
 
+function populateFormFromUser(user: typeof currentUser.value) {
+  if (!user) return
+  pubName.value = user.pub_name ?? ''
+  avatarUrl.value = user.avatarUrl ?? ''
+  uni.value = user.uni ?? uni.value
+  course.value = user.courses?.[0]?.name ?? course.value
+  degree.value = user.courses?.[0]?.degree ?? degree.value
+  semester.value = String(user.courses?.[0]?.semester ?? 3)
+  bio.value = user.bio ?? ''
+  syncInterestsFromUser(user.interests ?? [])
+}
+
 watch(
-  currentUser,
-  (user) => {
-    if (!user) return
-    pubName.value = user.pub_name ?? ''
-    avatarUrl.value = user.avatarUrl ?? ''
-    uni.value = user.uni ?? uni.value
-    course.value = user.courses?.[0]?.name ?? course.value
-    semester.value = String(user.courses?.[0]?.semester ?? 3)
-    bio.value = user.bio ?? ''
-    syncInterestsFromUser(user.interests ?? [])
+  [currentUser, isEditMode],
+  ([user, edit]) => {
+    if (edit && user && !formPopulated.value) {
+      populateFormFromUser(user)
+      formPopulated.value = true
+    }
   },
   { immediate: true },
+)
+
+watch(
+  () => route.name,
+  (name) => {
+    if (name === 'profile-edit') {
+      formPopulated.value = false
+    }
+  },
 )
 
 function syncInterestsFromUser(interests: string[]) {
@@ -128,7 +171,15 @@ function resolveInterestNames(): string[] {
   return [...fromTags, ...customInterests.value]
 }
 
+const interestCount = computed(() => resolveInterestNames().length)
+
 function toggleInterest(idx: number) {
+  const isSelected = selectedInterests.value.includes(idx)
+  if (!isSelected && interestCount.value >= MAX_INTERESTS) {
+    error.value = `Du kannst maximal ${MAX_INTERESTS} Interessen auswählen.`
+    return
+  }
+  error.value = ''
   selectedInterests.value = toggleSelection(selectedInterests.value, idx)
 }
 
@@ -136,6 +187,14 @@ function addCustomInterest() {
   const name = otherInterestInput.value.trim()
   if (name.length < 2) {
     error.value = 'Interesse muss mindestens 2 Zeichen haben.'
+    return
+  }
+  if (name.length > MAX_CUSTOM_INTEREST_LENGTH) {
+    error.value = `Ein Interesse darf höchstens ${MAX_CUSTOM_INTEREST_LENGTH} Zeichen haben.`
+    return
+  }
+  if (interestCount.value >= MAX_INTERESTS) {
+    error.value = `Du kannst maximal ${MAX_INTERESTS} Interessen auswählen.`
     return
   }
   if (name.toLowerCase() === OTHER_INTEREST_LABEL.toLowerCase()) {
@@ -159,12 +218,15 @@ function removeCustomInterest(name: string) {
 
 async function handleRegister() {
   error.value = ''
-  if (!email.value.includes('@')) {
-    error.value = 'Bitte gib eine gültige E-Mail-Adresse ein.'
+  const trimmedEmail = email.value.trim()
+
+  if (!isValidRegistrationEmail(trimmedEmail)) {
+    error.value = 'Bitte gib eine gültige E-Mail-Adresse ein (mit @ und .de oder .com).'
     return
   }
-  if (password.value.length < 8) {
-    error.value = 'Das Passwort muss mindestens 8 Zeichen haben.'
+  if (!isValidPassword(password.value)) {
+    error.value =
+      'Das Passwort muss mindestens 8 Zeichen, einen Großbuchstaben und ein Sonderzeichen enthalten.'
     return
   }
   if (resolveInterestNames().length === 0) {
@@ -174,10 +236,11 @@ async function handleRegister() {
 
   try {
     await register({
-      email: email.value,
+      email: trimmedEmail,
       password: password.value,
       uni: uni.value,
       course: course.value,
+      degree: degree.value,
       semester: parseInt(semester.value, 10),
       interests: resolveInterestNames(),
     })
@@ -207,11 +270,11 @@ async function handleUpdate() {
       bio: bio.value,
       uni: uni.value,
       course: course.value,
+      degree: degree.value,
       semester: parseInt(semester.value, 10),
       interests: resolveInterestNames(),
     })
     await fetchMeta()
-    syncInterestsFromUser(currentUser.value?.interests ?? resolveInterestNames())
     show('Profil gespeichert.', 'success')
     if (currentUser.value) {
       router.push({ name: 'profile-view', params: { id: currentUser.value.id.toString() } })
@@ -255,14 +318,16 @@ async function handleUpdate() {
         required
       />
 
-      <FormField
-        v-if="!isLoggedIn"
-        v-model="password"
-        label="Passwort"
-        type="password"
-        placeholder="Mindestens 8 Zeichen"
-        required
-      />
+      <div v-if="!isLoggedIn">
+        <FormField
+          v-model="password"
+          label="Passwort"
+          type="password"
+          placeholder="Mindestens 8 Zeichen"
+          required
+        />
+        <p class="char-hint">Mind. 8 Zeichen, 1 Großbuchstabe und 1 Sonderzeichen.</p>
+      </div>
 
       <template v-if="isEditMode">
         <FormField
@@ -301,7 +366,13 @@ async function handleUpdate() {
 
       <FormField v-model="course" label="Studiengang" as="select">
         <template #options>
-          <option v-for="c in filterOptions.courses" :key="c" :value="c">{{ c }}</option>
+          <option v-for="c in coursesForSelectedUni" :key="c" :value="c">{{ c }}</option>
+        </template>
+      </FormField>
+
+      <FormField v-model="degree" label="Abschluss" as="select">
+        <template #options>
+          <option v-for="d in filterOptions.degrees" :key="d" :value="d">{{ d }}</option>
         </template>
       </FormField>
 
@@ -316,7 +387,7 @@ async function handleUpdate() {
       <FormField v-if="isEditMode" v-model="bio" label="Bio" as="textarea" placeholder="Erzähl kurz etwas über dich…" />
 
       <div class="form-group">
-        <label>Interessen</label>
+        <label>Interessen ({{ interestCount }}/{{ MAX_INTERESTS }})</label>
         <TagList>
           <FilterTag
             v-for="(interest, idx) in filterOptions.interests"
@@ -345,9 +416,11 @@ async function handleUpdate() {
             <input
               v-model="otherInterestInput"
               type="text"
+              :maxlength="MAX_CUSTOM_INTEREST_LENGTH"
               placeholder="z. B. Schach, Yoga, …"
               @keydown.enter.prevent="addCustomInterest"
             />
+            <p class="char-hint">{{ otherInterestInput.length }}/{{ MAX_CUSTOM_INTEREST_LENGTH }} Zeichen</p>
           </div>
           <AppButton type="button" variant="secondary" @click="addCustomInterest">
             Hinzufügen
@@ -384,6 +457,12 @@ form {
   margin: 1rem 0 0;
   color: var(--color-text-muted);
   font-size: 0.95rem;
+}
+
+.char-hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }
 
 .form-group label {

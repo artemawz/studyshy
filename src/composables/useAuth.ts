@@ -77,6 +77,7 @@ export function useAuth() {
     password: string
     uni: string
     course: string
+    degree?: string | null
     semester: number
     interests: string[]
   }): Promise<void> {
@@ -110,6 +111,7 @@ export function useAuth() {
     bio?: string
     uni?: string
     course?: string
+    degree?: string | null
     semester?: number
     interests?: string[]
   }): Promise<void> {

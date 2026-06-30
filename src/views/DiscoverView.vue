@@ -9,19 +9,27 @@ import EmptyState from '@/components/EmptyState.vue'
 import AppButton from '@/components/AppButton.vue'
 import { useStudents } from '@/composables/useStudents'
 import { useMeta } from '@/composables/useMeta'
-import { filterStudents, getMatchPercent, getMatchScore, toggleSelection } from '@/misc'
+import {
+  filterStudents,
+  getFilterMatchScore,
+  getMatchPercent,
+  getWeightedMatchScore,
+  toggleSelection,
+} from '@/misc'
 import type { StudentFilters, User } from '@/types'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { currentUser } = useAuth()
+const { currentUser, isLoggedIn } = useAuth()
 const { students, loading, error, fetchStudents } = useStudents()
 const { filterOptions, platformStats, fetchMeta } = useMeta()
 
 const selectedUnis = ref<number[]>([])
 const selectedCourses = ref<number[]>([])
+const selectedDegrees = ref<number[]>([])
 const selectedInterests = ref<number[]>([])
 const selectedSemesters = ref<number[]>([])
+const courseSearch = ref('')
 const sortBy = ref<'match' | 'name'>('match')
 
 onMounted(async () => {
@@ -31,15 +39,60 @@ onMounted(async () => {
 const activeFilters = computed<StudentFilters>(() => ({
   unis: selectedUnis.value.map((i) => filterOptions.value.unis[i]!),
   courses: selectedCourses.value.map((i) => filterOptions.value.courses[i]!),
+  degrees: selectedDegrees.value.map((i) => filterOptions.value.degrees[i]!),
   interests: selectedInterests.value.map((i) => filterOptions.value.interests[i]!),
   semesters: selectedSemesters.value.map((i) => filterOptions.value.semesters[i]!),
 }))
 
+const COURSE_RESULT_LIMIT = 25
+
+// Studiengänge erst nach Sucheingabe anzeigen (sonst zu lang), eingegrenzt auf die gewählte Hochschule.
+const courseSearchActive = computed(() => courseSearch.value.trim().length > 0)
+
+const allVisibleCourses = computed(() => {
+  let names = filterOptions.value.courses
+
+  const selectedUniNames = selectedUnis.value
+    .map((i) => filterOptions.value.unis[i])
+    .filter((u): u is string => Boolean(u))
+
+  if (selectedUniNames.length > 0) {
+    const allowed = new Set(
+      selectedUniNames.flatMap((u) => filterOptions.value.coursesByUni?.[u] ?? []),
+    )
+    names = names.filter((n) => allowed.has(n))
+  }
+
+  const query = courseSearch.value.trim().toLowerCase()
+  if (!query) return []
+
+  names = names.filter((n) => n.toLowerCase().includes(query))
+
+  return names.map((name) => ({ name, idx: filterOptions.value.courses.indexOf(name) }))
+})
+
+const visibleCourses = computed(() => allVisibleCourses.value.slice(0, COURSE_RESULT_LIMIT))
+
+const courseOverflow = computed(() =>
+  Math.max(0, allVisibleCourses.value.length - COURSE_RESULT_LIMIT),
+)
+
+// Bereits ausgewählte Studiengänge immer als Tag zeigen, auch ohne Suche.
+const selectedCourseTags = computed(() =>
+  selectedCourses.value
+    .map((idx) => ({ name: filterOptions.value.courses[idx], idx }))
+    .filter((c): c is { name: string; idx: number } => Boolean(c.name)),
+)
+
 const filteredStudents = computed(() => filterStudents(students.value, activeFilters.value))
 
 function studentMatchScore(student: User) {
-  if (!currentUser.value) return { matched: 0, total: 0 }
-  return getMatchScore(student, currentUser.value)
+  // Eingeloggt: gewichtete Kompatibilität zum eigenen Profil (funktioniert auch ohne Filter).
+  // Ausgeloggt: Rückfall auf filterbasierten Score (nur sinnvoll mit gesetzten Filtern).
+  if (currentUser.value) {
+    return getWeightedMatchScore(student, currentUser.value)
+  }
+  return getFilterMatchScore(student, activeFilters.value)
 }
 
 const sortedStudents = computed(() => {
@@ -49,7 +102,6 @@ const sortedStudents = computed(() => {
       (a.pub_name ?? '').localeCompare(b.pub_name ?? '', 'de'),
     )
   }
-  if (!currentUser.value) return list
   return list.sort((a, b) => getMatchPercent(studentMatchScore(b)) - getMatchPercent(studentMatchScore(a)))
 })
 
@@ -60,6 +112,9 @@ const activeFilterChips = computed(() => {
   )
   selectedCourses.value.forEach((idx) =>
     chips.push({ label: filterOptions.value.courses[idx]!, group: 'courses', idx }),
+  )
+  selectedDegrees.value.forEach((idx) =>
+    chips.push({ label: filterOptions.value.degrees[idx]!, group: 'degrees', idx }),
   )
   selectedInterests.value.forEach((idx) =>
     chips.push({ label: filterOptions.value.interests[idx]!, group: 'interests', idx }),
@@ -73,6 +128,7 @@ const activeFilterChips = computed(() => {
 const toggles = {
   unis: selectedUnis,
   courses: selectedCourses,
+  degrees: selectedDegrees,
   interests: selectedInterests,
   semesters: selectedSemesters,
 }
@@ -90,6 +146,7 @@ function studentClicked(id: number) {
 function clearFilters() {
   selectedUnis.value = []
   selectedCourses.value = []
+  selectedDegrees.value = []
   selectedInterests.value = []
   selectedSemesters.value = []
 }
@@ -101,7 +158,7 @@ function removeChip(group: keyof typeof toggles, idx: number) {
 
 <template>
   <div class="page">
-    <section id="why" class="hero">
+    <section v-if="!isLoggedIn" id="why" class="hero">
       <h1>Warum<i>Studyshy</i>?</h1>
       <p>
         Findest auch du es schwer, während dem Studium neue Leute kennenzulernen, Freundschaften zu
@@ -128,7 +185,7 @@ function removeChip(group: keyof typeof toggles, idx: number) {
           <dd class="stat-value">{{ platformStats.universities }}</dd>
           <div class="stat-icon">🎓</div>
         </div>
-        <div class="stat-card">
+        <div v-if="!isLoggedIn" class="stat-card">
           <dt class="stat-title">Studenten verbunden</dt>
           <dd class="stat-value">{{ platformStats.connections }}</dd>
           <div class="stat-icon">🤝</div>
@@ -155,12 +212,50 @@ function removeChip(group: keyof typeof toggles, idx: number) {
       </TagList>
 
       <TagList title="Studiengänge">
+        <div class="course-search">
+          <input
+            v-model="courseSearch"
+            type="search"
+            class="course-search-input"
+            placeholder="Studiengang suchen…"
+          />
+        </div>
+
         <FilterTag
-          v-for="(courseName, idx) in filterOptions.courses"
-          :key="courseName"
-          :text="courseName"
-          :selected="selectedCourses.includes(idx)"
-          @click="selectedCourses = toggleSelection(selectedCourses, idx)"
+          v-for="c in selectedCourseTags"
+          :key="`sel-${c.name}`"
+          :text="c.name"
+          selected
+          @click="selectedCourses = toggleSelection(selectedCourses, c.idx)"
+        />
+
+        <FilterTag
+          v-for="c in visibleCourses"
+          v-show="!selectedCourses.includes(c.idx)"
+          :key="c.name"
+          :text="c.name"
+          :selected="false"
+          @click="selectedCourses = toggleSelection(selectedCourses, c.idx)"
+        />
+
+        <p v-if="!courseSearchActive" class="no-courses">
+          Tippe oben, um Studiengänge zu suchen.
+        </p>
+        <p v-else-if="allVisibleCourses.length === 0" class="no-courses">
+          Keine Studiengänge gefunden.
+        </p>
+        <p v-else-if="courseOverflow > 0" class="no-courses">
+          … {{ courseOverflow }} weitere – Suche verfeinern.
+        </p>
+      </TagList>
+
+      <TagList title="Abschluss">
+        <FilterTag
+          v-for="(degree, idx) in filterOptions.degrees"
+          :key="degree"
+          :text="degree"
+          :selected="selectedDegrees.includes(idx)"
+          @click="selectedDegrees = toggleSelection(selectedDegrees, idx)"
         />
       </TagList>
 
@@ -350,6 +445,38 @@ function removeChip(group: keyof typeof toggles, idx: number) {
 
 .section-title {
   color: var(--color-text);
+}
+
+.course-search {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.course-search-input {
+  width: 100%;
+  max-width: 360px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100rem;
+  padding: 0.5rem 1rem;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.course-search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.no-courses {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .loading-hint {

@@ -15,6 +15,7 @@ export function useStudents() {
   async function fetchStudents(filters?: {
     unis?: string[]
     courses?: string[]
+    degrees?: string[]
     interests?: string[]
     semesters?: string[]
   }) {
@@ -24,6 +25,7 @@ export function useStudents() {
       const params: Record<string, string[]> = {}
       if (filters?.unis?.length) params.uni = filters.unis
       if (filters?.courses?.length) params.course = filters.courses
+      if (filters?.degrees?.length) params.degree = filters.degrees
       if (filters?.interests?.length) params.interest = filters.interests
       if (filters?.semesters?.length) params.semester = filters.semesters
 

@@ -7,6 +7,11 @@ import RegistrationView from '@/views/RegistrationView.vue'
 import StudentProfileView from '@/views/StudentProfileView.vue'
 import ChatView from '@/views/ChatView.vue'
 import ChatOverviewView from '@/views/ChatOverviewView.vue'
+import FriendsView from '@/views/FriendsView.vue'
+import GroupsView from '@/views/GroupsView.vue'
+import GroupChatView from '@/views/GroupChatView.vue'
+import BoardView from '@/views/BoardView.vue'
+import EventsView from '@/views/EventsView.vue'
 import { getToken } from '@/services/api'
 import { getStoredUserId } from '@/composables/useAuth'
 
@@ -61,10 +66,37 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/friends',
+      name: 'friends',
+      component: FriendsView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/chats',
       name: 'chats',
       component: ChatOverviewView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/groups',
+      name: 'groups',
+      component: GroupsView,
+    },
+    {
+      path: '/groups/:id',
+      name: 'group-chat',
+      component: GroupChatView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/board',
+      name: 'board',
+      component: BoardView,
+    },
+    {
+      path: '/events',
+      name: 'events',
+      component: EventsView,
     },
   ],
 })

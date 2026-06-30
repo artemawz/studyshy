@@ -4,6 +4,11 @@ import { getRandomInt } from '@/misc'
 export const filterOptions: FilterOptions = {
   unis: ['Hochschule Bochum', 'Ruhr-Universität Bochum'],
   courses: ['Informatik', 'Elektrotechnik', 'BWL', 'Germanistik', 'Medizin', 'Lehramt', 'Jura'],
+  coursesByUni: {
+    'Hochschule Bochum': ['Informatik', 'Elektrotechnik', 'BWL'],
+    'Ruhr-Universität Bochum': ['Informatik', 'Medizin', 'Jura', 'Germanistik'],
+  },
+  degrees: ['Bachelor', 'Master'],
   interests: [
     'Flugzeuge',
     'Kochen',
@@ -121,6 +126,11 @@ export const mockChats: ChatPreview[] = [
     lastMessage: 'Klingt gut, treffen wir uns morgen in der Mensa?',
     updatedAt: new Date(Date.now() - 1000 * 60 * 12),
     unread: true,
+    status: 'accepted',
+    requestedBy: 2,
+    isIncomingRequest: false,
+    isOutgoingRequest: false,
+    isFriend: true,
   },
   {
     id: 2,
@@ -129,6 +139,11 @@ export const mockChats: ChatPreview[] = [
     lastMessage: 'Hast du schon die Übungsblätter für Algorithmen?',
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
     unread: false,
+    status: 'accepted',
+    requestedBy: 5,
+    isIncomingRequest: false,
+    isOutgoingRequest: false,
+    isFriend: true,
   },
 ]
 

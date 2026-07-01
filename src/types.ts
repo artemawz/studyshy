@@ -67,6 +67,8 @@ export interface Group {
   memberCount?: number
   isMember?: boolean
   members?: GroupMember[]
+  unread?: boolean
+  lastMessageAt?: string | null
   createdAt?: string
 }
 
@@ -93,6 +95,7 @@ export interface BoardPost {
   authorId: number
   isOwner: boolean
   commentCount?: number
+  hasUnreadComments?: boolean
   author?: {
     id: number
     pub_name?: string

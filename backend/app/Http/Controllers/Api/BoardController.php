@@ -26,11 +26,12 @@ class BoardController extends Controller
             : [];
 
         $posts = BoardPost::query()
-            ->with('author')
+            ->with(['author', 'latestComment'])
             ->withCount('comments')
             ->when($request->filled('category'), fn ($q) => $q->where('category', $request->query('category')))
             ->whereNotIn('user_id', $hidden)
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return BoardPostResource::collection($posts);
@@ -72,6 +73,11 @@ class BoardController extends Controller
         $hidden = $request->user()
             ? $this->blockService->hiddenUserIds($request->user()->id)
             : [];
+
+        // Wenn die/der Ersteller:in die Kommentare öffnet, gilt der Beitrag ab jetzt als gelesen.
+        if ($request->user() && $post->user_id === $request->user()->id) {
+            $post->update(['comments_read_at' => now()]);
+        }
 
         $comments = $post->comments()
             ->with('author')

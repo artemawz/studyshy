@@ -44,9 +44,22 @@ done
 
 php artisan migrate --force --no-interaction
 
-if [ ! -f storage/app/.seeded ]; then
+# Anhand der DB selbst prüfen, ob schon Daten vorhanden sind (statt einer lokalen
+# Marker-Datei, die z.B. bei einem Neubau des Containers verloren gehen kann,
+# während das mariadb-Volume bestehen bleibt – das führte sonst zu einem
+# Crash-Loop durch doppelte Demo-Nutzer beim erneuten Seeden).
+USER_COUNT=$(php -r "
+try {
+    \$pdo = new PDO('mysql:host='.getenv('DB_HOST').';port='.(getenv('DB_PORT')?:3306).';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));
+    echo \$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+} catch (Exception \$e) {
+    echo '0';
+}
+")
+
+if [ "${USER_COUNT:-0}" = "0" ]; then
   php artisan db:seed --force --no-interaction
-  touch storage/app/.seeded
 fi
+touch storage/app/.seeded 2>/dev/null || true
 
 exec php artisan serve --host=0.0.0.0 --port=8000

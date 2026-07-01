@@ -33,6 +33,10 @@ class ChatController extends Controller
                 ->where('users.id', $user->id)
                 ->whereNull('chat_participants.hidden_at'))
             ->with(['participants', 'messages' => fn ($q) => $q->latest('sent_at')->limit(1)])
+            // Deterministische Basis-Reihenfolge (sonst liefert MySQL ohne ORDER BY
+            // keine stabile Zeilenfolge, was bei Ties in sortByDesc dazu führte, dass
+            // die Liste bei jedem Poll leicht anders sortiert war -> sichtbares "Flackern").
+            ->orderByDesc('id')
             ->get()
             ->sortByDesc(fn (Chat $chat) => $chat->messages->first()?->sent_at ?? $chat->updated_at)
             ->values();

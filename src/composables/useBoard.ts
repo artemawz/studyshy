@@ -8,6 +8,11 @@ const posts = ref<BoardPost[]>([])
 const loading = ref(false)
 const commentsByPost = ref<Map<number, BoardComment[]>>(new Map())
 
+// Eigener, von der (ggf. gefilterten) Pinnwand-Ansicht unabhängiger State für die
+// Glocke: eigene Beiträge mit ungelesenen Kommentaren. So überschreibt das
+// Hintergrund-Polling nicht die auf der Pinnwand aktive Kategorie-Filterung.
+const unreadCommentPosts = ref<BoardPost[]>([])
+
 export function useBoard() {
   async function fetchPosts(category?: string) {
     loading.value = true
@@ -17,6 +22,11 @@ export function useBoard() {
     } finally {
       loading.value = false
     }
+  }
+
+  async function fetchUnreadCommentPosts() {
+    const res = await api.getBoardPosts()
+    unreadCommentPosts.value = res.data.filter((p) => p.isOwner && p.hasUnreadComments)
   }
 
   async function createPost(data: { category: string; title: string; body: string }) {
@@ -37,6 +47,11 @@ export function useBoard() {
   async function fetchComments(postId: number) {
     const res = await api.getBoardComments(postId)
     commentsByPost.value.set(postId, res.data)
+    // Öffnen der Kommentare markiert sie serverseitig als gelesen (nur relevant
+    // für die/den Ersteller:in) – das lokal sofort widerspiegeln.
+    const post = posts.value.find((p) => p.id === postId)
+    if (post) post.hasUnreadComments = false
+    unreadCommentPosts.value = unreadCommentPosts.value.filter((p) => p.id !== postId)
     return getComments(postId)
   }
 
@@ -59,8 +74,10 @@ export function useBoard() {
 
   return {
     posts,
+    unreadCommentPosts,
     loading,
     fetchPosts,
+    fetchUnreadCommentPosts,
     createPost,
     deletePost,
     getComments,

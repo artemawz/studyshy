@@ -31,8 +31,11 @@ const password = ref('')
 const pubName = ref('')
 const avatarUrl = ref('')
 const previewUrl = ref<string | null>(null)
+// Ausgewählte Datei bzw. zufällige URL werden erst beim Klick auf "Profil
+// speichern" tatsächlich übernommen – bis dahin nur lokale Vorschau.
+const pendingAvatarFile = ref<File | null>(null)
+const pendingAvatarUrl = ref<string | null>(null)
 const avatarInput = ref<HTMLInputElement | null>(null)
-const uploadingAvatar = ref(false)
 const uni = ref('')
 const course = ref('')
 const degree = ref('Bachelor')
@@ -45,6 +48,13 @@ const otherInterestInput = ref('')
 const error = ref('')
 const saving = ref(false)
 const formPopulated = ref(false)
+
+const displayAvatarUrl = computed(
+  () => previewUrl.value || pendingAvatarUrl.value || avatarUrl.value || null,
+)
+const hasPendingAvatarChange = computed(
+  () => pendingAvatarFile.value !== null || pendingAvatarUrl.value !== null,
+)
 
 const coursesForSelectedUni = computed(() => {
   const byUni = filterOptions.value.coursesByUni?.[uni.value]
@@ -63,23 +73,18 @@ function randomAvatarUrl() {
   return `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 64) + 1}`
 }
 
-async function shuffleAvatar() {
-  const url = randomAvatarUrl()
+function shuffleAvatar() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = null
-  try {
-    await updateProfile({ avatar_url: url })
-    avatarUrl.value = url
-    show('Profilbild aktualisiert.', 'success')
-  } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Profilbild konnte nicht gesetzt werden.'
-  }
+  pendingAvatarFile.value = null
+  pendingAvatarUrl.value = randomAvatarUrl()
 }
 
 function openAvatarPicker() {
   avatarInput.value?.click()
 }
 
-async function onAvatarSelected(event: Event) {
+function onAvatarSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
@@ -97,18 +102,15 @@ async function onAvatarSelected(event: Event) {
   error.value = ''
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = URL.createObjectURL(file)
+  pendingAvatarUrl.value = null
+  pendingAvatarFile.value = file
+}
 
-  uploadingAvatar.value = true
-  try {
-    const user = await uploadAvatar(file)
-    avatarUrl.value = user.avatarUrl ?? ''
-    show('Profilbild hochgeladen.', 'success')
-  } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Upload fehlgeschlagen.'
-    previewUrl.value = null
-  } finally {
-    uploadingAvatar.value = false
-  }
+function clearPendingAvatarChange() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = null
+  pendingAvatarFile.value = null
+  pendingAvatarUrl.value = null
 }
 
 onUnmounted(() => {
@@ -229,6 +231,11 @@ async function handleRegister() {
       'Das Passwort muss mindestens 8 Zeichen, einen Großbuchstaben und ein Sonderzeichen enthalten.'
     return
   }
+  const trimmedPubName = pubName.value.trim()
+  if (trimmedPubName && trimmedPubName.length < 2) {
+    error.value = 'Der Nickname muss mindestens 2 Zeichen haben.'
+    return
+  }
   if (resolveInterestNames().length === 0) {
     error.value = 'Bitte wähle mindestens ein Interesse.'
     return
@@ -238,6 +245,7 @@ async function handleRegister() {
     await register({
       email: trimmedEmail,
       password: password.value,
+      pub_name: trimmedPubName || undefined,
       uni: uni.value,
       course: course.value,
       degree: degree.value,
@@ -265,6 +273,11 @@ async function handleUpdate() {
 
   saving.value = true
   try {
+    // Bild erst hier tatsächlich übernehmen: entweder Datei hochladen
+    // oder die gewählte zufällige URL mit den restlichen Feldern speichern.
+    if (pendingAvatarFile.value) {
+      await uploadAvatar(pendingAvatarFile.value)
+    }
     await updateProfile({
       pub_name: pubName.value.trim(),
       bio: bio.value,
@@ -273,7 +286,9 @@ async function handleUpdate() {
       degree: degree.value,
       semester: parseInt(semester.value, 10),
       interests: resolveInterestNames(),
+      avatar_url: pendingAvatarUrl.value ?? undefined,
     })
+    clearPendingAvatarChange()
     await fetchMeta()
     show('Profil gespeichert.', 'success')
     if (currentUser.value) {
@@ -329,6 +344,17 @@ async function handleUpdate() {
         <p class="char-hint">Mind. 8 Zeichen, 1 Großbuchstabe und 1 Sonderzeichen.</p>
       </div>
 
+      <div v-if="!isEditMode && !isLoggedIn">
+        <FormField
+          v-model="pubName"
+          label="Nickname (optional)"
+          placeholder="z. B. Bücherwurm22 – sonst wählen wir einen für dich"
+        />
+        <p class="char-hint">
+          Bleibt leer, bekommst du automatisch einen anonymen Nickname wie „Student #a3f“.
+        </p>
+      </div>
+
       <template v-if="isEditMode">
         <FormField
           v-model="pubName"
@@ -346,15 +372,28 @@ async function handleUpdate() {
             class="sr-only"
             @change="onAvatarSelected"
           />
-          <div class="avatar-actions">
-            <AppButton type="button" :disabled="uploadingAvatar" @click="openAvatarPicker">
-              {{ uploadingAvatar ? 'Wird hochgeladen…' : 'Bild hochladen' }}
-            </AppButton>
-            <AppButton type="button" variant="secondary" @click="shuffleAvatar">
-              Zufälliges Bild
-            </AppButton>
+          <div class="avatar-preview-row">
+            <img v-if="displayAvatarUrl" :src="displayAvatarUrl" class="avatar-preview" alt="Profilbild-Vorschau" />
+            <span v-else class="avatar-preview placeholder">{{ (pubName || '?').charAt(0) }}</span>
+            <div class="avatar-actions">
+              <AppButton type="button" @click="openAvatarPicker">Bild hochladen</AppButton>
+              <AppButton type="button" variant="secondary" @click="shuffleAvatar">
+                Zufälliges Bild
+              </AppButton>
+              <AppButton
+                v-if="hasPendingAvatarChange"
+                type="button"
+                variant="secondary"
+                @click="clearPendingAvatarChange"
+              >
+                Zurücksetzen
+              </AppButton>
+            </div>
           </div>
           <p class="avatar-hint">JPEG, PNG, WebP oder GIF · max. 2 MB</p>
+          <p v-if="hasPendingAvatarChange" class="avatar-hint pending">
+            Neues Bild ausgewählt – wird erst mit „Profil speichern“ übernommen.
+          </p>
         </div>
       </template>
 
@@ -478,6 +517,33 @@ form {
   gap: 0.5rem;
 }
 
+.avatar-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+}
+
+.avatar-preview.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+}
+
 .avatar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -488,6 +554,10 @@ form {
   margin: 0;
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+.avatar-hint.pending {
+  color: var(--color-accent);
 }
 
 .sr-only {

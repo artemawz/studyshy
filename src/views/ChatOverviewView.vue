@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/EmptyState.vue'
 import AppButton from '@/components/AppButton.vue'
@@ -9,22 +9,18 @@ import { formatRelativeTime } from '@/misc'
 import { ApiError } from '@/services/api'
 
 const router = useRouter()
-const { chats, loading, error, fetchChats, acceptChat, declineChat, deleteChat } = useChats()
+const { chats, loading, loaded, error, fetchChats, acceptChat, declineChat, deleteChat } = useChats()
 const { show } = useToast()
-
-const POLL_MS = 5000
-let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const incomingRequests = computed(() => chats.value.filter((c) => c.isIncomingRequest))
 const otherChats = computed(() => chats.value.filter((c) => !c.isIncomingRequest))
 
+// Kein eigener Poll-Timer mehr: Die NotificationBell in der Navigation hält
+// `chats` bereits alle paar Sekunden aktuell, solange man eingeloggt ist (was
+// hier Voraussetzung ist). Ein zweiter, unsynchronisierter Timer führte zu
+// überlappenden Anfragen und sichtbarem Flackern in der Liste.
 onMounted(() => {
   fetchChats()
-  pollTimer = setInterval(fetchChats, POLL_MS)
-})
-
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
 })
 
 function openChat(id: number) {
@@ -69,7 +65,7 @@ async function handleDelete(chatId: number, event: Event) {
     <h1 class="page-title">Deine Chats</h1>
     <p class="page-subtitle">Unterhalte dich anonym mit deinen Matches.</p>
 
-    <EmptyState v-if="loading && chats.length === 0" title="Chats werden geladen…" />
+    <EmptyState v-if="!loaded && loading" title="Chats werden geladen…" />
 
     <p v-else-if="error" class="form-error">{{ error }}</p>
 

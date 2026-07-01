@@ -224,6 +224,7 @@ async function handleCancelFriendRequest() {
       <div class="actions">
         <template v-if="isOwnProfile">
           <RouterLink :to="{ name: 'profile-edit' }" class="btn">Profil bearbeiten</RouterLink>
+          <RouterLink :to="{ name: 'block-list' }" class="btn btn-secondary">Blockierte Nutzer</RouterLink>
           <RouterLink to="/" class="btn btn-secondary">Zurück zur Suche</RouterLink>
         </template>
         <template v-else-if="isBlocked">

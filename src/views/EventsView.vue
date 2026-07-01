@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppButton from '@/components/AppButton.vue'
 import FormField from '@/components/FormField.vue'
@@ -11,7 +11,7 @@ import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/services/api'
 
 const router = useRouter()
-const { events, loading, fetchEvents, createEvent, joinEvent, leaveEvent, deleteEvent } = useEvents()
+const { events, loading, loaded, fetchEvents, createEvent, joinEvent, leaveEvent, deleteEvent } = useEvents()
 const { filterOptions, fetchMeta } = useMeta()
 const { isLoggedIn } = useAuth()
 const { show } = useToast()
@@ -20,10 +20,17 @@ const showForm = ref(false)
 const submitting = ref(false)
 const expandedEvents = ref<Set<number>>(new Set())
 const form = ref({ title: '', description: '', location: '', uni: '', starts_at: '' })
+const searchQuery = ref('')
 
 onMounted(() => {
   fetchEvents()
   fetchMeta()
+})
+
+const filteredEvents = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return events.value
+  return events.value.filter((e) => e.title.toLowerCase().includes(query))
 })
 
 function toggleExpand(eventId: number) {
@@ -103,16 +110,23 @@ function formatDate(value: string) {
 <template>
   <div class="page-narrow">
     <div class="events-header">
-      <div>
-        <h1 class="page-title">Events & Treffen</h1>
-        <p class="page-subtitle">Lerntreffen, Stammtische und Campus-Events – finde Anschluss.</p>
-      </div>
-      <AppButton v-if="isLoggedIn" @click="showForm = !showForm">
-        {{ showForm ? 'Abbrechen' : 'Event erstellen' }}
-      </AppButton>
+      <h1 class="page-title">Events & Treffen</h1>
+      <p class="page-subtitle">Lerntreffen, Stammtische und Campus-Events – finde Anschluss.</p>
     </div>
 
     <p v-if="!isLoggedIn" class="hint-box card">Melde dich an, um Events zu erstellen oder teilzunehmen.</p>
+
+    <div v-if="isLoggedIn" class="toolbar-row">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="search-input"
+        placeholder="Events nach Titel durchsuchen…"
+      />
+      <AppButton @click="showForm = !showForm">
+        {{ showForm ? 'Abbrechen' : 'Event erstellen' }}
+      </AppButton>
+    </div>
 
     <form v-if="showForm && isLoggedIn" class="card event-form" @submit.prevent="submitEvent">
       <FormField v-model="form.title" label="Titel" placeholder="z. B. Gemeinsames Lernen in der Bib" />
@@ -130,15 +144,20 @@ function formatDate(value: string) {
       </AppButton>
     </form>
 
-    <EmptyState v-if="loading && !events.length" title="Events werden geladen…" />
+    <EmptyState v-if="!loaded && loading" title="Events werden geladen…" />
     <EmptyState
       v-else-if="!events.length"
       title="Keine anstehenden Events"
       hint="Erstelle das erste Event und lade andere ein."
     />
+    <EmptyState
+      v-else-if="!filteredEvents.length"
+      title="Keine Events gefunden"
+      hint="Passe deine Suche an."
+    />
 
     <ul v-else class="event-list">
-      <li v-for="event in events" :key="event.id" class="card event-item" :class="{ expanded: expandedEvents.has(event.id) }">
+      <li v-for="event in filteredEvents" :key="event.id" class="card event-item" :class="{ expanded: expandedEvents.has(event.id) }">
         <button type="button" class="event-toggle" @click="toggleExpand(event.id)">
           <div class="event-date">{{ formatDate(event.startsAt) }}</div>
           <div class="event-title-row">
@@ -199,16 +218,38 @@ function formatDate(value: string) {
 
 <style scoped>
 .events-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
 }
 
 .hint-box {
   margin-top: 1rem;
   color: var(--color-text-muted);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100rem;
+  padding: 0.55rem 1.1rem;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .event-form {

@@ -12,6 +12,18 @@ class GroupResource extends JsonResource
     {
         $viewerId = $request->user()?->id;
 
+        $myPivot = $this->relationLoaded('members')
+            ? $this->members->firstWhere('id', $viewerId)?->pivot
+            : null;
+        $lastMessage = $this->relationLoaded('messages') ? $this->messages->first() : null;
+
+        // Nur für Mitglieder relevant – sonst hätte jede Gruppe mit Nachrichten
+        // fälschlich "unread", solange man ihr nicht beigetreten ist.
+        $unread = $myPivot !== null
+            && $lastMessage
+            && $lastMessage->sender_id !== $viewerId
+            && (! $myPivot->last_read_at || $lastMessage->sent_at->gt($myPivot->last_read_at));
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -34,6 +46,8 @@ class GroupResource extends JsonResource
                     'role' => $m->pivot->role,
                 ])->values(),
             ),
+            'unread' => (bool) $unread,
+            'lastMessageAt' => $lastMessage?->sent_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
         ];
     }

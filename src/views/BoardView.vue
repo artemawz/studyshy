@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppButton from '@/components/AppButton.vue'
 import FormField from '@/components/FormField.vue'
@@ -74,8 +74,15 @@ function commentAuthorName(comment: { author?: { pub_name?: string }; authorId: 
 const activeCategory = ref<string>('')
 const showForm = ref(false)
 const submitting = ref(false)
+const searchQuery = ref('')
 
 const form = ref({ category: BOARD_CATEGORIES[0] ?? 'Sonstiges', title: '', body: '' })
+
+const filteredPosts = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return posts.value
+  return posts.value.filter((p) => p.title.toLowerCase().includes(query))
+})
 
 onMounted(() => fetchPosts())
 
@@ -145,18 +152,25 @@ function formatDate(value?: string) {
 <template>
   <div class="page-narrow">
     <div class="board-header">
-      <div>
-        <h1 class="page-title">Schwarzes Brett</h1>
-        <p class="page-subtitle">Lernpartner finden, Material teilen, Wohnen & mehr – ganz ohne Druck.</p>
-      </div>
-      <AppButton v-if="isLoggedIn" @click="showForm = !showForm">
-        {{ showForm ? 'Abbrechen' : 'Beitrag erstellen' }}
-      </AppButton>
+      <h1 class="page-title">Schwarzes Brett</h1>
+      <p class="page-subtitle">Lernpartner finden, Material teilen, Wohnen & mehr – ganz ohne Druck.</p>
     </div>
 
     <p v-if="!isLoggedIn" class="hint-box card">
       Melde dich an, um eigene Beiträge zu erstellen.
     </p>
+
+    <div v-if="isLoggedIn" class="toolbar-row">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="search-input"
+        placeholder="Beiträge nach Titel durchsuchen…"
+      />
+      <AppButton @click="showForm = !showForm">
+        {{ showForm ? 'Abbrechen' : 'Beitrag erstellen' }}
+      </AppButton>
+    </div>
 
     <form v-if="showForm && isLoggedIn" class="card post-form" @submit.prevent="submitPost">
       <FormField v-model="form.category" label="Kategorie" as="select">
@@ -190,9 +204,14 @@ function formatDate(value?: string) {
       title="Noch keine Beiträge"
       hint="Sei die erste Person, die hier etwas postet."
     />
+    <EmptyState
+      v-else-if="!filteredPosts.length"
+      title="Keine Beiträge gefunden"
+      hint="Passe deine Suche an."
+    />
 
     <ul v-else class="post-list">
-      <li v-for="post in posts" :key="post.id" class="card post-item">
+      <li v-for="post in filteredPosts" :key="post.id" class="card post-item" :class="{ unread: post.hasUnreadComments }">
         <div class="post-top">
           <span class="cat-badge">{{ post.category }}</span>
           <span class="post-date">{{ formatDate(post.createdAt) }}</span>
@@ -208,6 +227,7 @@ function formatDate(value?: string) {
           <div class="post-actions">
             <button type="button" class="link-btn" @click="toggleComments(post.id)">
               💬 {{ post.commentCount ?? 0 }}
+              <span v-if="post.hasUnreadComments" class="badge">Neu</span>
             </button>
             <button v-if="post.isOwner" type="button" class="link-btn danger" @click="handleDelete(post.id)">
               Löschen
@@ -253,16 +273,37 @@ function formatDate(value?: string) {
 
 <style scoped>
 .board-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .hint-box {
   margin-top: 1rem;
   color: var(--color-text-muted);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100rem;
+  padding: 0.55rem 1.1rem;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .post-form {
@@ -282,6 +323,7 @@ function formatDate(value?: string) {
 .cat-chip {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
+  color: var(--color-text);
   border-radius: 999px;
   padding: 0.35rem 0.85rem;
   font-size: 0.85rem;
@@ -301,6 +343,25 @@ function formatDate(value?: string) {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.post-item.unread {
+  border-color: var(--color-accent);
+  background: #b9aaff11;
+}
+
+.post-actions .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: var(--color-accent-hover);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .post-top {

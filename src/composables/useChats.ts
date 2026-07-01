@@ -1,11 +1,17 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ChatPreview, Message } from '@/types'
 import { api } from '@/services/api'
 
 const chats = ref<ChatPreview[]>([])
 const messagesByChat = ref<Map<number, Message[]>>(new Map())
 const loading = ref(false)
+// Wird nach dem allerersten Laden dauerhaft true – Hintergrund-Polling toggelt
+// zwar weiterhin `loading`, soll aber nicht erneut die "wird geladen"-Anzeige
+// aufblitzen lassen (v. a. sichtbar, wenn die Liste leer ist).
+const loaded = ref(false)
 const error = ref<string | null>(null)
+
+const unreadCount = computed(() => chats.value.filter((c) => c.unread).length)
 
 function parseChat(chat: ChatPreview): ChatPreview {
   return {
@@ -77,6 +83,7 @@ export function useChats() {
       chats.value = []
     } finally {
       loading.value = false
+      loaded.value = true
     }
   }
 
@@ -205,7 +212,9 @@ export function useChats() {
 
   return {
     chats,
+    unreadCount,
     loading,
+    loaded,
     error,
     fetchChats,
     getChatById,

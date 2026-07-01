@@ -11,6 +11,7 @@ class BoardPostResource extends JsonResource
     public function toArray(Request $request): array
     {
         $viewerId = $request->user()?->id;
+        $isOwner = $this->user_id === $viewerId;
 
         return [
             'id' => $this->id,
@@ -18,8 +19,15 @@ class BoardPostResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'authorId' => $this->user_id,
-            'isOwner' => $this->user_id === $viewerId,
+            'isOwner' => $isOwner,
             'commentCount' => $this->comments_count ?? $this->whenLoaded('comments', fn () => $this->comments->count()),
+            'hasUnreadComments' => $this->when(
+                $isOwner,
+                fn () => $this->relationLoaded('latestComment')
+                    && $this->latestComment !== null
+                    && $this->latestComment->user_id !== $viewerId
+                    && (! $this->comments_read_at || $this->latestComment->created_at->gt($this->comments_read_at)),
+            ),
             'author' => $this->whenLoaded('author', fn () => [
                 'id' => $this->author->id,
                 'pub_name' => $this->author->pub_name,

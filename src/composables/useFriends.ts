@@ -6,6 +6,7 @@ const friends = ref<FriendEntry[]>([])
 const incoming = ref<FriendRequest[]>([])
 const outgoing = ref<FriendRequest[]>([])
 const loading = ref(false)
+const loaded = ref(false)
 const error = ref<string | null>(null)
 
 const incomingCount = computed(() => incoming.value.length)
@@ -22,6 +23,7 @@ async function fetchFriends() {
     error.value = e instanceof Error ? e.message : 'Freunde konnten nicht geladen werden.'
   } finally {
     loading.value = false
+    loaded.value = true
   }
 }
 
@@ -57,6 +59,7 @@ export function useFriends() {
     outgoing,
     incomingCount,
     loading,
+    loaded,
     error,
     fetchFriends,
     getStatus,

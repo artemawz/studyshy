@@ -22,10 +22,12 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
+        $pubName = trim((string) $request->input('pub_name', ''));
+
         $user = User::create([
             'email' => $request->string('email')->lower()->value(),
             'password' => Hash::make($request->string('password')->value()),
-            'pub_name' => 'Student #'.Str::lower(Str::random(3)),
+            'pub_name' => $pubName !== '' ? $pubName : 'Student #'.Str::lower(Str::random(3)),
             'uni' => $request->string('uni')->value(),
             'bio' => '',
             'avatar_url' => 'https://i.pravatar.cc/150?img='.random_int(1, 64),

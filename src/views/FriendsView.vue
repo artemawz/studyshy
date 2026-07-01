@@ -13,6 +13,7 @@ const {
   incoming,
   outgoing,
   loading,
+  loaded,
   error,
   fetchFriends,
   acceptRequest,
@@ -78,7 +79,7 @@ async function handleRemove(friendshipId: number) {
     <h1 class="page-title">Freunde</h1>
     <p class="page-subtitle">Freundschaftsanfragen verwalten und verbundene Studierende sehen.</p>
 
-    <EmptyState v-if="loading && !friends.length && !incoming.length" title="Freunde werden geladen…" />
+    <EmptyState v-if="!loaded && loading" title="Freunde werden geladen…" />
 
     <p v-else-if="error" class="form-error">{{ error }}</p>
 

@@ -45,15 +45,15 @@ export function useStudents() {
   }
 
   async function fetchStudentById(id: number): Promise<User | undefined> {
-    const cached = getStudentById(id)
-    if (cached) return cached
-
+    // Immer frisch vom Server laden, damit z. B. Profiländerungen (Bio, Bild,
+    // Interessen) sofort sichtbar sind, ohne dass ein Reload nötig ist. Der
+    // Cache dient nur noch als Fallback, falls die Anfrage fehlschlägt.
     try {
       const user = await api.getStudent(id)
       cacheStudent(user)
       return user
     } catch {
-      return undefined
+      return getStudentById(id)
     }
   }
 

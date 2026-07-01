@@ -11,7 +11,7 @@ import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/services/api'
 
 const router = useRouter()
-const { groups, loading, fetchGroups, createGroup, joinGroup, leaveGroup, deleteGroup } = useGroups()
+const { groups, loading, loaded, fetchGroups, createGroup, joinGroup, leaveGroup, deleteGroup } = useGroups()
 const { filterOptions, fetchMeta } = useMeta()
 const { isLoggedIn } = useAuth()
 const { show } = useToast()
@@ -20,14 +20,21 @@ const showForm = ref(false)
 const submitting = ref(false)
 const expandedGroups = ref<Set<number>>(new Set())
 const form = ref({ name: '', description: '', uni: '', course: '' })
+const searchQuery = ref('')
 
 onMounted(() => {
   fetchGroups()
   fetchMeta()
 })
 
-const myGroups = computed(() => groups.value.filter((g) => g.isMember))
-const otherGroups = computed(() => groups.value.filter((g) => !g.isMember))
+const filteredGroups = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return groups.value
+  return groups.value.filter((g) => g.name.toLowerCase().includes(query))
+})
+
+const myGroups = computed(() => filteredGroups.value.filter((g) => g.isMember))
+const otherGroups = computed(() => filteredGroups.value.filter((g) => !g.isMember))
 
 const coursesForUni = computed(() => {
   if (!form.value.uni) return filterOptions.value.courses
@@ -117,16 +124,23 @@ function openChat(id: number) {
 <template>
   <div class="page-narrow">
     <div class="groups-header">
-      <div>
-        <h1 class="page-title">Lerngruppen</h1>
-        <p class="page-subtitle">Tritt Gruppen bei oder gründe deine eigene – lernen, austauschen, vernetzen.</p>
-      </div>
-      <AppButton v-if="isLoggedIn" @click="showForm = !showForm">
-        {{ showForm ? 'Abbrechen' : 'Gruppe gründen' }}
-      </AppButton>
+      <h1 class="page-title">Lerngruppen</h1>
+      <p class="page-subtitle">Tritt Gruppen bei oder gründe deine eigene – lernen, austauschen, vernetzen.</p>
     </div>
 
     <p v-if="!isLoggedIn" class="hint-box card">Melde dich an, um Gruppen beizutreten oder zu gründen.</p>
+
+    <div v-if="isLoggedIn" class="toolbar-row">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="search-input"
+        placeholder="Gruppen nach Namen durchsuchen…"
+      />
+      <AppButton @click="showForm = !showForm">
+        {{ showForm ? 'Abbrechen' : 'Gruppe gründen' }}
+      </AppButton>
+    </div>
 
     <form v-if="showForm && isLoggedIn" class="card group-form" @submit.prevent="submitGroup">
       <FormField v-model="form.name" label="Name" placeholder="z. B. Analysis I – Lerngruppe" />
@@ -148,7 +162,7 @@ function openChat(id: number) {
       </AppButton>
     </form>
 
-    <EmptyState v-if="loading && !groups.length" title="Gruppen werden geladen…" />
+    <EmptyState v-if="!loaded && loading" title="Gruppen werden geladen…" />
 
     <template v-else>
       <section v-if="myGroups.length" class="section">
@@ -158,11 +172,14 @@ function openChat(id: number) {
             v-for="group in myGroups"
             :key="group.id"
             class="card group-item"
-            :class="{ expanded: expandedGroups.has(group.id) }"
+            :class="{ expanded: expandedGroups.has(group.id), unread: group.unread }"
           >
             <button type="button" class="group-toggle" @click="toggleExpand(group.id)">
               <div class="group-title-row">
-                <h3 class="group-name">{{ group.name }}</h3>
+                <span class="group-name-wrap">
+                  <h3 class="group-name">{{ group.name }}</h3>
+                  <span v-if="group.unread" class="badge">Neu</span>
+                </span>
                 <span class="expand-icon">{{ expandedGroups.has(group.id) ? '▲' : '▼' }}</span>
               </div>
               <p v-if="group.description && !expandedGroups.has(group.id)" class="group-desc clamp">
@@ -211,7 +228,12 @@ function openChat(id: number) {
       <section class="section">
         <h2 class="section-title">Gruppen entdecken</h2>
         <EmptyState
-          v-if="!otherGroups.length"
+          v-if="!otherGroups.length && searchQuery.trim()"
+          title="Keine Gruppen gefunden"
+          hint="Passe deine Suche an oder gründe eine neue Gruppe."
+        />
+        <EmptyState
+          v-else-if="!otherGroups.length"
           title="Keine weiteren Gruppen"
           hint="Gründe eine neue Gruppe und lade andere ein."
         />
@@ -271,16 +293,37 @@ function openChat(id: number) {
 
 <style scoped>
 .groups-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .hint-box {
   margin-top: 1rem;
   color: var(--color-text-muted);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100rem;
+  padding: 0.55rem 1.1rem;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .group-form {
@@ -336,10 +379,36 @@ function openChat(id: number) {
   gap: 0.5rem;
 }
 
+.group-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .group-name {
   margin: 0;
   font-size: 1.1rem;
   color: var(--color-accent);
+}
+
+.group-item.unread {
+  border-color: var(--color-accent);
+  background: #b9aaff11;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-accent-hover);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .expand-icon {

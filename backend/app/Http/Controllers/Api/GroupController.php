@@ -15,8 +15,9 @@ class GroupController extends Controller
     {
         $groups = Group::query()
             ->withCount('members')
-            ->with('members')
+            ->with(['members', 'messages' => fn ($q) => $q->latest('sent_at')->limit(1)])
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return GroupResource::collection($groups);

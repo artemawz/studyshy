@@ -30,7 +30,7 @@ class StudentController extends Controller
 
         $this->filterService->apply($query, $request);
 
-        return UserResource::collection($query->orderBy('pub_name')->get());
+        return UserResource::collection($query->orderBy('pub_name')->orderBy('id')->get());
     }
 
     public function show(int $id): UserResource

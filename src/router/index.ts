@@ -8,6 +8,7 @@ import StudentProfileView from '@/views/StudentProfileView.vue'
 import ChatView from '@/views/ChatView.vue'
 import ChatOverviewView from '@/views/ChatOverviewView.vue'
 import FriendsView from '@/views/FriendsView.vue'
+import BlockListView from '@/views/BlockListView.vue'
 import GroupsView from '@/views/GroupsView.vue'
 import GroupChatView from '@/views/GroupChatView.vue'
 import BoardView from '@/views/BoardView.vue'
@@ -75,6 +76,12 @@ const router = createRouter({
       path: '/chats',
       name: 'chats',
       component: ChatOverviewView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/blocks',
+      name: 'block-list',
+      component: BlockListView,
       meta: { requiresAuth: true },
     },
     {

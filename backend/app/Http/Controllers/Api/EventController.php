@@ -27,6 +27,7 @@ class EventController extends Controller
             ->whereNotIn('created_by', $hidden)
             ->where('starts_at', '>=', now()->subHours(3))
             ->orderBy('starts_at')
+            ->orderBy('id')
             ->get();
 
         return EventResource::collection($events);

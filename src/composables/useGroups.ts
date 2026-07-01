@@ -1,10 +1,13 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { Group, GroupMessage } from '@/types'
 import { api } from '@/services/api'
 
 const groups = ref<Group[]>([])
 const loading = ref(false)
+const loaded = ref(false)
 const messagesByGroup = ref<Map<number, GroupMessage[]>>(new Map())
+
+const unreadCount = computed(() => groups.value.filter((g) => g.unread).length)
 
 function parseMessage(message: GroupMessage): GroupMessage {
   return { ...message, sentAt: new Date(message.sentAt) }
@@ -18,6 +21,7 @@ export function useGroups() {
       groups.value = res.data
     } finally {
       loading.value = false
+      loaded.value = true
     }
   }
 
@@ -113,7 +117,9 @@ export function useGroups() {
 
   return {
     groups,
+    unreadCount,
     loading,
+    loaded,
     fetchGroups,
     getGroupById,
     fetchGroup,

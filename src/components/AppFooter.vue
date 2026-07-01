@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+
+const { isLoggedIn } = useAuth()
 </script>
 
 <template>
@@ -10,7 +13,7 @@ import { RouterLink } from 'vue-router'
         <RouterLink to="/" class="textlink">Entdecken</RouterLink>
         <RouterLink to="/why-studyshy" class="textlink">Warum Studyshy?</RouterLink>
         <RouterLink to="/about" class="textlink">Über uns</RouterLink>
-        <RouterLink to="/register" class="textlink">Registrieren</RouterLink>
+        <RouterLink v-if="!isLoggedIn" to="/register" class="textlink">Registrieren</RouterLink>
       </nav>
       <p class="copy">© {{ new Date().getFullYear() }} Studyshy</p>
     </div>

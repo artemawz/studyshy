@@ -24,6 +24,7 @@ class RegisterRequest extends FormRequest
                 'unique:users,email',
             ],
             'password' => ['required', 'string', 'min:8', 'regex:/[A-Z]/', 'regex:/[^A-Za-z0-9]/'],
+            'pub_name' => ['nullable', 'string', 'min:2', 'max:64'],
             'uni' => ['required', 'string', Rule::in(config('studyshy.universities'))],
             'course' => ['required', 'string', 'max:255'],
             'degree' => ['nullable', 'string', Rule::in(config('studyshy.degrees'))],

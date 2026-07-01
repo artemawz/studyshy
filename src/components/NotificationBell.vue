@@ -3,6 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFriends } from '@/composables/useFriends'
 import { useChats } from '@/composables/useChats'
+import { useGroups } from '@/composables/useGroups'
+import { useBoard } from '@/composables/useBoard'
 import { useEvents } from '@/composables/useEvents'
 import { useAuth } from '@/composables/useAuth'
 import {
@@ -16,6 +18,8 @@ const route = useRoute()
 const { isLoggedIn } = useAuth()
 const { incoming, fetchFriends } = useFriends()
 const { chats, fetchChats } = useChats()
+const { groups, fetchGroups } = useGroups()
+const { unreadCommentPosts, fetchUnreadCommentPosts } = useBoard()
 const { events, fetchEvents } = useEvents()
 
 const open = ref(false)
@@ -32,9 +36,11 @@ const unreadChats = computed(() =>
   ),
 )
 
+const unreadGroups = computed(() => groups.value.filter((g) => g.unread))
+
 interface NotificationItem {
   key: string
-  type: 'friend' | 'chat' | 'message' | 'event'
+  type: 'friend' | 'chat' | 'message' | 'event' | 'group' | 'comment'
   name: string
   avatarUrl?: string | null
   text: string
@@ -78,6 +84,28 @@ const items = computed<NotificationItem[]>(() => {
     })
   }
 
+  for (const group of unreadGroups.value) {
+    list.push({
+      key: `group-${group.id}`,
+      type: 'group',
+      name: group.name,
+      avatarUrl: null,
+      text: 'hat neue Nachrichten',
+      action: () => router.push({ name: 'group-chat', params: { id: group.id.toString() } }),
+    })
+  }
+
+  for (const post of unreadCommentPosts.value) {
+    list.push({
+      key: `comment-${post.id}`,
+      type: 'comment',
+      name: post.title,
+      avatarUrl: null,
+      text: 'hat einen neuen Kommentar erhalten',
+      action: () => router.push('/board'),
+    })
+  }
+
   if (isLoggedIn.value) {
     for (const reminder of getActiveEventReminders(events.value)) {
       list.push({
@@ -102,6 +130,19 @@ function toggle() {
   if (open.value) refresh()
 }
 
+function itemIcon(item: NotificationItem): string {
+  switch (item.type) {
+    case 'event':
+      return '📅'
+    case 'group':
+      return '👥'
+    case 'comment':
+      return '💬'
+    default:
+      return item.name.charAt(0)
+  }
+}
+
 function handleItem(item: NotificationItem) {
   open.value = false
   if (item.notifyKey) markEventNotified(item.notifyKey)
@@ -109,7 +150,7 @@ function handleItem(item: NotificationItem) {
 }
 
 async function refresh() {
-  const tasks: Promise<unknown>[] = [fetchFriends(), fetchChats()]
+  const tasks: Promise<unknown>[] = [fetchFriends(), fetchChats(), fetchGroups(), fetchUnreadCommentPosts()]
   if (isLoggedIn.value) tasks.push(fetchEvents())
   await Promise.all(tasks)
 }
@@ -159,7 +200,7 @@ onUnmounted(() => {
         <li v-for="item in items" :key="item.key">
           <button type="button" class="dropdown-item" @click="handleItem(item)">
             <img v-if="item.avatarUrl" :src="item.avatarUrl" class="item-avatar" alt="" />
-            <span v-else class="item-avatar placeholder">{{ item.type === 'event' ? '📅' : item.name.charAt(0) }}</span>
+            <span v-else class="item-avatar placeholder">{{ itemIcon(item) }}</span>
             <span class="item-text">
               <template v-if="item.type === 'event'">{{ item.text }}</template>
               <template v-else><strong>{{ item.name }}</strong> {{ item.text }}</template>
@@ -215,6 +256,7 @@ onUnmounted(() => {
   top: calc(100% + 0.5rem);
   right: 0;
   width: 290px;
+  max-width: calc(100vw - 2rem);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 0.6rem;

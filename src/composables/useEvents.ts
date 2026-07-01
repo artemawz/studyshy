@@ -4,6 +4,7 @@ import { api } from '@/services/api'
 
 const events = ref<EventItem[]>([])
 const loading = ref(false)
+const loaded = ref(false)
 
 export function useEvents() {
   async function fetchEvents() {
@@ -13,6 +14,7 @@ export function useEvents() {
       events.value = res.data
     } finally {
       loading.value = false
+      loaded.value = true
     }
   }
 
@@ -47,5 +49,5 @@ export function useEvents() {
     events.value = events.value.filter((e) => e.id !== id)
   }
 
-  return { events, loading, fetchEvents, createEvent, joinEvent, leaveEvent, deleteEvent }
+  return { events, loading, loaded, fetchEvents, createEvent, joinEvent, leaveEvent, deleteEvent }
 }

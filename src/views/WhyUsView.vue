@@ -30,7 +30,7 @@ const features = [
     <section class="hero">
       <h1 class="page-title">
         Warum
-        <RouterLink to="/"><img src="/studyshy-logo-notext.svg" alt="Studyshy" /></RouterLink>
+        <RouterLink to="/"><img src="/studyshy-logo.svg" alt="Studyshy" /></RouterLink>
         ?
       </h1>
       <p class="page-subtitle">

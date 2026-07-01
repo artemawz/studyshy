@@ -87,8 +87,13 @@ const selectedCourseTags = computed(() =>
 const filteredStudents = computed(() => filterStudents(students.value, activeFilters.value))
 
 function studentMatchScore(student: User) {
-  // Eingeloggt: gewichtete Kompatibilität zum eigenen Profil (funktioniert auch ohne Filter).
-  // Ausgeloggt: Rückfall auf filterbasierten Score (nur sinnvoll mit gesetzten Filtern).
+  // Sobald Filter gesetzt sind, soll die Übereinstimmung auch die Filter widerspiegeln
+  // (nicht nur die Ähnlichkeit zum eigenen Profil).
+  if (hasActiveFilters.value) {
+    return getFilterMatchScore(student, activeFilters.value)
+  }
+  // Ohne Filter: Eingeloggt gewichtete Kompatibilität zum eigenen Profil,
+  // ausgeloggt 0 % (es gibt weder Filter noch ein Profil zum Vergleichen).
   if (currentUser.value) {
     return getWeightedMatchScore(student, currentUser.value)
   }
@@ -483,5 +488,11 @@ function removeChip(group: keyof typeof toggles, idx: number) {
   text-align: center;
   color: var(--color-text-muted);
   margin-bottom: 1rem;
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 1.5rem 1.5rem 1rem 1rem;
+  }
 }
 </style>

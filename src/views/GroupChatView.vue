@@ -325,6 +325,7 @@ function formatTime(value: string | Date) {
 .back-btn {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  color: var(--color-text);
   border-radius: 0.5rem;
   width: 36px;
   height: 36px;

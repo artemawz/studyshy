@@ -75,6 +75,7 @@ export function useAuth() {
   async function register(data: {
     email: string
     password: string
+    pub_name?: string
     uni: string
     course: string
     degree?: string | null

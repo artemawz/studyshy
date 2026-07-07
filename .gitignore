@@ -37,3 +37,13 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Laravel backend
+backend/vendor/
+backend/.env
+backend/storage/*.key
+backend/public/hot
+backend/public/storage
+backend/.phpunit.result.cache
+backend/database/database.sqlite
+backend/storage/app/.seeded

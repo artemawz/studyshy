@@ -1,0 +1,64 @@
+services:
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: studyshy
+      MYSQL_USER: studyshy
+      MYSQL_PASSWORD: studyshy
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    environment:
+      APP_NAME: Studyshy
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mariadb
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: studyshy
+      DB_USERNAME: studyshy
+      DB_PASSWORD: studyshy
+      SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  mariadb_data:
+  backend_vendor:
+  frontend_node_modules:

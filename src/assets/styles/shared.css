@@ -176,3 +176,10 @@ html {
   border: 1px dashed var(--color-border);
   border-radius: 0.5rem;
 }
+
+/* Teilnehmer-/Mitgliederlisten: max. 4 Einträge sichtbar, Rest scrollen */
+.list-scroll-4 {
+  max-height: calc(4 * 2.5rem + 3 * 0.5rem);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}

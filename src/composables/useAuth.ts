@@ -1,7 +1,12 @@
 import { computed, ref } from 'vue'
 import type { User } from '@/types'
+import { api, setToken, getToken } from '@/services/api'
 
 const STORAGE_KEY = 'studyshy-user'
+
+export function getStoredUserId(): number | null {
+  return loadUser()?.id ?? null
+}
 
 function loadUser(): User | null {
   try {
@@ -21,48 +26,118 @@ function saveUser(user: User | null) {
 }
 
 const currentUser = ref<User | null>(loadUser())
+const loading = ref(false)
+const initialized = ref(false)
+
+async function refreshUser() {
+  if (!getToken()) {
+    currentUser.value = null
+    saveUser(null)
+    return
+  }
+
+  try {
+    const user = await api.me()
+    currentUser.value = user
+    saveUser(user)
+  } catch {
+    setToken(null)
+    currentUser.value = null
+    saveUser(null)
+  }
+}
 
 export function useAuth() {
   const isLoggedIn = computed(() => currentUser.value !== null)
 
-  function login(email: string, _password: string): boolean {
-    currentUser.value = {
-      id: 0,
-      pub_name: email.split('@')[0] ?? 'Du',
-      uni: 'Hochschule Bochum',
-      courses: [{ name: 'Informatik', semester: 3 }],
-      interests: ['Musik'],
-      avatarUrl: 'https://i.pravatar.cc/150?img=5',
-      bio: 'Dein anonymes Profil – bearbeite es in den Einstellungen.',
+  async function initAuth() {
+    if (initialized.value) return
+    initialized.value = true
+    if (getToken()) {
+      loading.value = true
+      await refreshUser()
+      loading.value = false
     }
-    saveUser(currentUser.value)
-    return true
   }
 
-  function register(data: {
+  async function login(email: string, password: string): Promise<void> {
+    loading.value = true
+    try {
+      const { token, user } = await api.login(email, password)
+      setToken(token)
+      currentUser.value = user
+      saveUser(user)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function register(data: {
     email: string
+    password: string
+    pub_name?: string
     uni: string
     course: string
+    degree?: string | null
     semester: number
     interests: string[]
-  }): boolean {
-    currentUser.value = {
-      id: 0,
-      pub_name: `Student #${Math.random().toString(16).slice(2, 5)}`,
-      uni: data.uni,
-      courses: [{ name: data.course, semester: data.semester }],
-      interests: data.interests,
-      avatarUrl: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 64) + 1}`,
-      bio: '',
+  }): Promise<void> {
+    loading.value = true
+    try {
+      const { token, user } = await api.register(data)
+      setToken(token)
+      currentUser.value = user
+      saveUser(user)
+    } finally {
+      loading.value = false
     }
-    saveUser(currentUser.value)
-    return true
   }
 
-  function logout() {
+  async function logout(): Promise<void> {
+    try {
+      if (getToken()) {
+        await api.logout()
+      }
+    } catch {
+      // Token may already be invalid
+    }
+    setToken(null)
     currentUser.value = null
     saveUser(null)
   }
 
-  return { currentUser, isLoggedIn, login, register, logout }
+  async function updateProfile(data: {
+    pub_name?: string
+    avatar_url?: string | null
+    bio?: string
+    uni?: string
+    course?: string
+    degree?: string | null
+    semester?: number
+    interests?: string[]
+  }): Promise<void> {
+    const user = await api.updateProfile(data)
+    currentUser.value = user
+    saveUser(user)
+  }
+
+  async function uploadAvatar(file: File): Promise<import('@/types').User> {
+    const user = await api.uploadAvatar(file)
+    currentUser.value = user
+    saveUser(user)
+    return user
+  }
+
+  return {
+    currentUser,
+    isLoggedIn,
+    loading,
+    initAuth,
+    login,
+    register,
+    logout,
+    updateProfile,
+    uploadAvatar,
+    refreshUser,
+  }
 }

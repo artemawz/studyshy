@@ -10,7 +10,8 @@ import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
-const { getChatById, getChatByPartnerId, resolveChatId, getMessagesForChat, sendMessage } = useChats()
+const { getChatById, getChatByPartnerId, resolveChatId, getMessagesForChat, sendMessage } =
+  useChats()
 const { getStudentById } = useStudents()
 const { isLoggedIn } = useAuth()
 const { show } = useToast()

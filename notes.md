@@ -1,0 +1,23 @@
+- mockData.ts
+- SPA > MPA weil ...
+  - einfaches state management, da man nichts zwischen seiten austauschen muss
+  - super ux
+    - kein neuladen des html
+    - sehr schnell nach dem ersten laden
+  - perfekte trennung von frontend + backend
+    - spätere app entwicklung ist sehr einfach
+  - OBWOHL...
+    - schlechte seo
+      - LÖSUNG:
+        - isolierung einzelner seiten für seo
+          - ABER
+            - entweder aufwendig oder unsauber weil workarounds
+    - höhere last clientside
+    - länge erste ladezeit da viel heruntergeladen wird
+    - ABER ...
+      - vue ist verhältnismäßig klein und schnell
+- routing
+  - moderner html5 history mode
+  - intelligentes scrolling verhalten
+  - dynamische routen mit platzhaltern wie :id
+- ...
